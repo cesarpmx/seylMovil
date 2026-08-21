@@ -12,6 +12,7 @@ import { CambioEstatusScreen } from '../presentation/screens/almacen/movimientos
 import { VerificadorScreen } from '../presentation/screens/embarque/VerificadorScreen';
 import { IngresoProductoScreen } from '../presentation/screens/almacen/ingresos/IngresoProductoScreen';
 import { SurtidoPlScreen } from '../presentation/screens/almacen/surtido/SurtidoPlScreen';
+import { AplicarPlScreen } from '../presentation/screens/almacen/surtido/AplicarPlScreen';
 import { BitacoraAlmacenScreen } from '../presentation/screens/almacen/bitacora/BitacoraAlmacenScreen';
 import { VerificadorEmbarqueScreen } from '../presentation/screens/embarque/VerificadorEmbarqueScreen';
 import { UbicarEnvioScreen } from '../presentation/screens/almacen/movimientosInternos/UbicarEnvioScreen';
@@ -28,6 +29,7 @@ const ScreenMapping = {
   //'/almacen/embarque/verificarqr/': VerificadorScreen,
   '/almacen/ingreso/recibirproducto/': IngresoProductoScreen,
   '/almacen/surtido/surtirpl/': SurtidoPlScreen,
+  '/almacen/surtido/aplicarpl/': AplicarPlScreen,
   '/almacen/ingresos/verificarqr/': VerificadorScreen,
   '/almacen/bitacora/': BitacoraAlmacenScreen,
   '/almacen/embarque/verificarqr/':VerificadorEmbarqueScreen,

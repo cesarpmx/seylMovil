@@ -9,6 +9,7 @@ import {EvaIconsPack} from '@ui-kitten/eva-icons';
 import {AuthProvider} from './presentation/providers/AuthProvider';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {useAuthStore} from './presentation/store/modules/useModulesStore';
+import {initAuthConfig} from './config/api/authMode';
 
 export const SeylAlmacenes = () => {
   const queryClient = new QueryClient();
@@ -21,7 +22,10 @@ export const SeylAlmacenes = () => {
   const {checkAuthStatus} = useAuthStore();
 
   useEffect(() => {
-    checkAuthStatus();
+    (async () => {
+      await initAuthConfig();
+      await checkAuthStatus();
+    })();
   }, []);
 
   return (

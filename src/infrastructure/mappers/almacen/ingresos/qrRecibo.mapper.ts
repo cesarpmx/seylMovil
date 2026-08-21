@@ -27,6 +27,7 @@ export class QrReciboMapper {
             prrempid:result.prrempid,
             prralmid:result.prralmid,
             prrfeccita:result.prrfeccita,
+            prrhoracita:result.prrhoracita,
             prrlineatr:result.prrlineatr,
             prrplacas:result.prrplacas,
             prrchofer:result.prrchofer,

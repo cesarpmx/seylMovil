@@ -1,29 +1,60 @@
 import React, { useState } from 'react';
+import { StyleSheet } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 
-export const SimpleDropdown = ({ rawItems, initialValue, onChangeValue, placeholder }) => {
-    const [open, setOpen] = useState(false); // Estado para manejar la apertura del dropdown
-    const [value, setValue] = useState(initialValue); // Estado local para cada dropdown
-
-    const handleChangeValue = (newValue) => {
-        setValue(newValue); // Actualiza solo el estado local de este dropdown
-        onChangeValue(newValue); // Llama a la función prop que maneja el valor
-    };
+export const SimpleDropdown = ({ rawItems, initialValue, onChangeValue, placeholder, listMode = 'SCROLLVIEW', hasError = false, dropDownDirection = 'BOTTOM', disabled = false }) => {
+    const [open, setOpen] = useState(false);
+    const [value, setValue] = useState(initialValue);
 
     return (
         <DropDownPicker
-            items={rawItems} // Opciones disponibles
-            value={value} // Valor seleccionado local
-            setValue={handleChangeValue} // Actualiza solo el valor local
-            open={open} // Controla si el dropdown está abierto o cerrado
-            setOpen={setOpen} // Cambia el estado de apertura
-            placeholder={placeholder} // Texto de marcador de posición
+            items={rawItems}
+            value={value}
+            setValue={setValue}
+            open={open}
+            setOpen={setOpen}
+            placeholder={placeholder}
             zIndex={1000}
-            listMode="SCROLLVIEW" // Modo de visualización de lista
-            onSelectItem={() => setOpen(false)} // Cierra el dropdown después de seleccionar una opción
+            listMode={listMode}
+            dropDownDirection={dropDownDirection}
+            disabled={disabled}
+            disabledStyle={styles.disabledDropdown}
+            onChangeValue={(val) => onChangeValue?.(val)}
+            onSelectItem={() => setOpen(false)}
+            style={[styles.dropdown, hasError && styles.errorDropdown, disabled && styles.disabledDropdown]}
+            dropDownContainerStyle={styles.dropdownMenu}
+            textStyle={styles.dropdownText}
         />
     );
 };
+
+const styles = StyleSheet.create({
+    dropdown: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        height: 40,
+    },
+    dropdownMenu: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 5,
+    },
+    dropdownText: {
+        fontSize: 14,
+        color: '#333',
+    },
+    errorDropdown: {
+        borderColor: '#EF4444',
+        borderWidth: 1.5,
+        backgroundColor: '#FEF2F2',
+    },
+    disabledDropdown: {
+        backgroundColor: '#F1F5F9',
+        opacity: 1,
+    },
+});
 
 export default SimpleDropdown;
 

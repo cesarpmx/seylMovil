@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useRef, useState} from 'react';
 import {
   Text,
   TextInput,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
+  ScrollView,
 } from 'react-native';
 import {MainLayout} from '../../../layouts/MainLayout';
 import {Layout} from '@ui-kitten/components';
@@ -20,6 +21,9 @@ import {
 } from '../../../../actions/almacen/inventario/get-CentralInventario';
 import {SelectConteo} from '../../../components/ui/SelectConteo';
 import {EstadoInvSelect} from '../../../components/ui/EstadoInvSelect';
+import {SelectUbicacion, SelectUbicacionHandle} from '../../../components/ui/SelectUbicacion';
+import {SelectProducto, SelectProductoHandle} from '../../../components/ui/SelectProducto';
+import {getUbicacion} from '../../../../actions/almacen/movimientosInternos/get-Ubicaciones';
 
 import DatePicker from 'react-native-date-picker';
 
@@ -40,19 +44,33 @@ export const InventarioFisicoScreen = () => {
   const [inner, setInner] = useState('');
   const [lote, setLote] = useState('');
   const [fechaCaducidad, setFechaCaducidad] = useState('');
-  const [cantidadTotal, setCantidadTotal] = useState('');
-  const [cajas, setCajas] = useState('');
-  const [sueltas, setSueltas] = useState('');
+  const [cantidadTotal, setCantidadTotal] = useState('0');
+  const [cajas, setCajas] = useState('0');
+  const [sueltas, setSueltas] = useState('0');
   const [infprdid, setInfprdid] = useState('');
+  const [ubicacionValid, setUbicacionValid] = useState(false);
+  const [productoValid, setProductoValid] = useState(false);
+  const [palletValid, setPalletValid] = useState(false);
+  const [palletLockedProducto, setPalletLockedProducto] = useState(false);
+  const ubicacionRef = useRef<SelectUbicacionHandle>(null);
+  const productoRef = useRef<SelectProductoHandle>(null);
+  const palletRef = useRef<TextInput>(null);
 
   const calcularCantidad = () => {
-    const innerValue = parseInt(inner) || 0;
     const cajasValue = parseInt(cajas) || 0;
     const sueltasValue = parseInt(sueltas) || 0;
 
-    const resultado = innerValue * cajasValue + sueltasValue;
+    const resultado = cajasValue + sueltasValue;
 
     setCantidadTotal(resultado.toString());
+  };
+
+  const handleNumericChange = (
+    setter: React.Dispatch<React.SetStateAction<string>>,
+  ) => (text: string) => {
+    // Solo dígitos, sin negativos ni decimales; vacío se trata como '0'.
+    const sanitized = text.replace(/[^0-9]/g, '');
+    setter(sanitized === '' ? '0' : sanitized);
   };
   const [editable, setEditable] = useState(true);
   const [editableEmpresa, setEditableEmpresa] = useState(true);
@@ -60,6 +78,11 @@ export const InventarioFisicoScreen = () => {
   const [editableEstado, setEditableEstado] = useState(true);
 
   const [resetKey, setResetKey] = useState(0);
+  const [submitted, setSubmitted] = useState(false);
+  const lastFetchedPallet = useRef<string>('');
+  const lastFetchedConteo = useRef<string>('');
+
+  const isMissing = (value: string) => submitted && !value?.toString().trim();
 
   const handleEmpresaSelect = (value: string | null) => {
     console.log('Empresa seleccionada:', value);
@@ -85,56 +108,117 @@ export const InventarioFisicoScreen = () => {
     setEditableEstado(value === null)
   };
 
-  const handleSearchByPallet = async () => {
+  const clearPalletFields = () => {
+    setClaveProducto('');
+    setDescripcion('');
+    setUnidad('');
+    setInner('');
+    setLote('');
+    setFechaCaducidad('');
+    setInfprdid('');
+    setProductoValid(false);
+    setPalletLockedProducto(false);
+  };
+
+  const handleSearchByPallet = async (override?: string): Promise<boolean> => {
     try {
-      if (!idPallet) {
-        console.log('Por favor, ingresa un ID Pallet.');
-        return;
+      const current = ((override ?? idPallet) || '').trim();
+
+      // Si es el mismo valor que la última búsqueda, no hacemos nada.
+      if (current === lastFetchedPallet.current && current !== '') {
+        return palletValid;
       }
 
-      const data = await getIdPallet(idPallet);
+      if (!current) {
+        clearPalletFields();
+        lastFetchedPallet.current = '';
+        setPalletValid(false);
+        setPalletLockedProducto(false);
+        return false;
+      }
+
+      if (typeof override === 'string' && override !== idPallet) {
+        setIdPallet(override);
+      }
+
+      // Solo actualizamos el ref DESPUÉS del fetch para poder distinguir
+      // éxito de fallo (así no se pierden los datos si el pallet no existe).
+      const data = await getIdPallet(current);
 
       if (data && data.length > 0) {
         const item = data[0];
+        lastFetchedPallet.current = current;
 
         setClaveProducto(item.prdclave || '');
         setDescripcion(item.prdnombre || '');
         setUnidad(item.prdualid || '');
         setInner(item.prdinner?.toString() || '');
         setLote(item.raclote || '');
-        setFechaCaducidad(item.racfeccaducidad.toLocaleDateString || '');
-        setInfprdid(item.racprdid.toString() || '');
+        setFechaCaducidad(
+          item.racfeccaducidad
+            ? new Date(item.racfeccaducidad).toLocaleDateString()
+            : '',
+        );
+        setInfprdid(item.racprdid?.toString() || '');
+        if (item.prdclave) {
+          setProductoValid(true);
+          setPalletLockedProducto(true);
+        }
+        setPalletValid(true);
+        return true;
       } else {
-        console.log('No se encontraron datos.');
+        setPalletValid(false);
+        setPalletLockedProducto(false);
+        return false;
       }
     } catch (error) {
       console.error('Error fetching inventario físico:', error);
+      setPalletValid(false);
+      setPalletLockedProducto(false);
+      return false;
     }
   };
 
   const handleSearchByConteo = async () => {
     try {
-      if (!idConteo.trim()) {
-        console.log('Por favor, ingresa un ID.');
+      const current = idConteo.trim();
+
+      // Mismo valor que la última búsqueda → no re-fetchamos ni sobrescribimos
+      // los campos (evita que se pisen los datos que el usuario ya cambió).
+      if (current === lastFetchedConteo.current) {
         return;
       }
 
-      const data = await getInventarioFisico(idConteo);
+      if (!current) {
+        lastFetchedConteo.current = '';
+        return;
+      }
+
+      const data = await getInventarioFisico(current);
 
       if (data && data.length > 0) {
         const item = data[0];
+        lastFetchedConteo.current = current;
 
-        setIdPallet(item.infracid || '');
-        setClaveProducto(item.prdclave || '');
-        setDescripcion(item.prdnombre || '');
-        setUnidad(item.prdualid || '');
-        setInner(item.prdinner?.toString() || '');
-        setLote(item.inflote || '');
-        setFechaCaducidad(item.inffeccad || '');
-        setInfprdid(item.infprdid.toString() || '');
+        const nuevoPallet = item.infracid || '';
+        // Solo llenamos ID Pallet si el usuario NO escribió nada ahí.
+        // Evita pisar lo que está escribiendo mientras el fetch corría.
+        setIdPallet(prev => {
+          if (prev && prev.trim() !== '') return prev;
+          if (nuevoPallet) lastFetchedPallet.current = nuevoPallet;
+          return nuevoPallet;
+        });
 
-        // setCantidad(item.infaplicar?.toString() || '');
+        // Mismo criterio para los demás campos: no pisar si el usuario ya escribió
+        setClaveProducto(prev => (prev ? prev : item.prdclave || ''));
+        setDescripcion(prev => (prev ? prev : item.prdnombre || ''));
+        setUnidad(prev => (prev ? prev : item.prdualid || ''));
+        setInner(prev => (prev ? prev : item.prdinner?.toString() || ''));
+        setLote(prev => (prev ? prev : item.inflote || ''));
+        setFechaCaducidad(prev => (prev ? prev : item.inffeccad || ''));
+        setInfprdid(prev => (prev ? prev : item.infprdid?.toString() || ''));
       } else {
+        lastFetchedConteo.current = current;
         console.log('No se encontraron datos.');
       }
     } catch (error) {
@@ -144,8 +228,7 @@ export const InventarioFisicoScreen = () => {
 
   const handleSearchByProducto = async () => {
     try {
-      if (!claveProducto.trim() && !empresa) {
-        console.log('Por favor, ingresa un ID.');
+      if (!claveProducto.trim() || !empresa) {
         return;
       }
 
@@ -167,30 +250,16 @@ export const InventarioFisicoScreen = () => {
   };
 
   const moverTodos = async () => {
-    if (!empresa) {
-      Alert.alert('Error', 'Por favor, ingresa una empresa.');
-      return;
-    }
-    if (!almacen) {
-      Alert.alert('Error', 'Por favor, ingresa un almacen.');
-      return;
-    }
-    if (!conteo) {
-      Alert.alert('Error', 'Por favor, ingresa el conteo.');
-      return;
-    }
-    if (!estadoInv) {
-      Alert.alert('Error', 'Por favor, ingresa el estado del inventario.');
-      return;
-    }
-
-    if (!ubicacion || !cantidadTotal || !lote || !fechaCaducidad) {
+    if (!empresa || !almacen || !estadoInv || !claveProducto.trim()) {
+      setSubmitted(true);
       Alert.alert(
-        'Error',
-        'Faltan datos por llenar. Por favor, revisa todos los campos.',
+        'Faltan campos requeridos',
+        'Los campos marcados con * en rojo son obligatorios.',
       );
       return;
     }
+
+    setSubmitted(false);
 
     const valores = {
       infid: idConteo,
@@ -215,16 +284,21 @@ export const InventarioFisicoScreen = () => {
       setConteo('');
       setEstatus('');
       setUbicacion('');
+      setUbicacionValid(false);
       setIdPallet('');
+      setPalletValid(false);
+      setPalletLockedProducto(false);
+      lastFetchedPallet.current = '';
       setClaveProducto('');
+      setProductoValid(false);
       setDescripcion('');
       setUnidad('');
       setInner('');
       setLote('');
       setFechaCaducidad('');
-      setCantidadTotal('');
-      setCajas('');
-      setSueltas('');
+      setCantidadTotal('0');
+      setCajas('0');
+      setSueltas('0');
       setIdConteo('');
 
       Alert.alert(
@@ -246,9 +320,16 @@ export const InventarioFisicoScreen = () => {
   };
 
   const borrarDatos = () => {
+    setSubmitted(false);
+    lastFetchedPallet.current = '';
+    lastFetchedConteo.current = '';
     setConteo('');
     setEstatus('');
     setUbicacion('');
+    setUbicacionValid(false);
+    setProductoValid(false);
+    setPalletValid(false);
+    setPalletLockedProducto(false);
     setIdPallet('');
     setClaveProducto('');
     setDescripcion('');
@@ -256,9 +337,9 @@ export const InventarioFisicoScreen = () => {
     setInner('');
     setLote('');
     setFechaCaducidad('');
-    setCantidadTotal('');
-    setCajas('');
-    setSueltas('');
+    setCantidadTotal('0');
+    setCajas('0');
+    setSueltas('0');
     setIdConteo('');
 
     setEditableEmpresa(true);
@@ -326,6 +407,11 @@ export const InventarioFisicoScreen = () => {
   return (
     <MainLayout title="Inventario Físico" subTitle="Almacén">
       <Layout style={{flex: 1}}>
+        <ScrollView
+          style={{flex: 1}}
+          contentContainerStyle={{paddingBottom: 40}}
+          keyboardShouldPersistTaps="always"
+          nestedScrollEnabled>
         <View style={styles.container}>
           <View style={styles.switchContainer}>
             <Text style={styles.switchText}>Buscar Producto:</Text>
@@ -337,12 +423,14 @@ export const InventarioFisicoScreen = () => {
               empresas={empresas}
               onSelect={handleEmpresaSelect}
               editableEmpresa={editableEmpresa}
+              hasError={isMissing(empresa)}
             />
             <SelectAlmacen
               key={resetKey}
               almacenes={almacenes}
               onSelect={handleAlmacenSelect}
               editable={editable}
+              hasError={isMissing(almacen)}
             />
           </View>
 
@@ -358,42 +446,191 @@ export const InventarioFisicoScreen = () => {
               estatusArry={estatusArry}
               onSelect={handleEstadoInvonSelect}
               editableEstado={editableEstado}
+              hasError={isMissing(estadoInv)}
             />
           </View>
 
           <View style={styles.row}>
             <TextInput
               style={[styles.input, styles.halfInput]}
-              placeholder="# Conteo"
+              placeholder="# Conteo (1-3)"
+              placeholderTextColor="#94A3B8"
               onBlur={handleSearchByConteo}
               value={idConteo}
-              onChangeText={text => setIdConteo(text)}
+              keyboardType="numeric"
+              maxLength={1}
+              onChangeText={text => {
+                if (text === '' || text === '1' || text === '2' || text === '3') {
+                  setIdConteo(text);
+                } else {
+                  Alert.alert(
+                    'Valor no válido',
+                    'El # Conteo solo puede ser 1, 2 o 3.',
+                  );
+                }
+              }}
             />
 
             <TextInput
-              style={[styles.input, styles.halfInput]}
+              ref={palletRef}
+              style={[
+                styles.input,
+                styles.halfInput,
+                palletValid && styles.inputValidPallet,
+              ]}
               placeholder="ID Pallet"
-              onBlur={handleSearchByPallet}
+              placeholderTextColor="#94A3B8"
               value={idPallet}
-              onChangeText={text => setIdPallet(text)}
+              onChangeText={text => {
+                setIdPallet(text);
+                setPalletValid(false);
+                setPalletLockedProducto(false);
+              }}
+              onSubmitEditing={async e => {
+                const val = (e?.nativeEvent?.text ?? idPallet).trim();
+                if (!val) return;
+                const ok = await handleSearchByPallet(val);
+                if (ok) {
+                  setTimeout(() => ubicacionRef.current?.focus(), 100);
+                } else {
+                  setIdPallet('');
+                  lastFetchedPallet.current = '';
+                  Alert.alert(
+                    'ID Pallet no encontrado',
+                    `No se encontró información para el pallet "${val}".`,
+                    [
+                      {
+                        text: 'OK',
+                        onPress: () =>
+                          setTimeout(() => palletRef.current?.focus(), 100),
+                      },
+                    ],
+                  );
+                }
+              }}
+              returnKeyType="search"
+              blurOnSubmit={false}
             />
           </View>
 
-          <View style={styles.row}>
-            <TextInput
-              style={[styles.input, styles.halfInput]}
-              placeholder="Ubicación"
-              value={ubicacion}
-              onChangeText={text => setUbicacion(text)}
-            />
+          <View style={[styles.row, styles.ubicacionRow]}>
+            <View style={[styles.halfInput, { marginRight: 10 }]}>
+              <SelectUbicacion
+                ref={ubicacionRef}
+                almacen={almacen}
+                value={ubicacion}
+                onChangeText={text => {
+                  setUbicacion(text);
+                  setUbicacionValid(false);
+                }}
+                onSelect={ubiid => {
+                  setUbicacion(ubiid);
+                  setUbicacionValid(true);
+                  if (!palletLockedProducto) {
+                    setTimeout(() => productoRef.current?.focus(), 100);
+                  }
+                }}
+                onSubmitEditing={async text => {
+                  const val = (text ?? ubicacion).trim();
+                  if (!val || !almacen) return;
+                  setUbicacion(val);
+                  try {
+                    const items = await getUbicacion(almacen, val);
+                    const target = val.toUpperCase();
+                    // Match EXACTO (case-insensitive) — así funciona
+                    // igual con escaneo (handheld pega el valor completo)
+                    // que con escritura manual + enter.
+                    const found = items.some(
+                      it =>
+                        String(it.ubiid || '').trim().toUpperCase() === target,
+                    );
+                    if (found) {
+                      setUbicacionValid(true);
+                      setUbicacion(val);
+                      if (!palletLockedProducto) {
+                        setTimeout(() => productoRef.current?.focus(), 100);
+                      }
+                    } else {
+                      setUbicacionValid(false);
+                      setUbicacion('');
+                      Alert.alert(
+                        'Ubicación no encontrada',
+                        `La ubicación "${val}" no existe.`,
+                        [
+                          {
+                            text: 'OK',
+                            onPress: () =>
+                              setTimeout(() => ubicacionRef.current?.focus(), 100),
+                          },
+                        ],
+                      );
+                    }
+                  } catch {
+                    setUbicacionValid(false);
+                    setUbicacion('');
+                    Alert.alert(
+                      'Ubicación no encontrada',
+                      `La ubicación "${val}" no existe.`,
+                      [
+                        {
+                          text: 'OK',
+                          onPress: () =>
+                            setTimeout(() => ubicacionRef.current?.focus(), 100),
+                        },
+                      ],
+                    );
+                  }
+                }}
+                placeholder="Ubicación (3 letras)"
+                inputStyle="form"
+                hasValid={ubicacionValid}
+              />
+            </View>
 
-            <TextInput
-              style={[styles.input, styles.halfInput]}
-              placeholder="Clave Producto"
-              value={claveProducto}
-              onBlur={handleSearchByProducto}
-              onChangeText={text => setClaveProducto(text)}
-            />
+            <View style={[styles.halfInput, { zIndex: 1200 }]}>
+              <SelectProducto
+                ref={productoRef}
+                empresa={empresa}
+                value={claveProducto}
+                editable={!palletLockedProducto}
+                onChangeText={text => {
+                  setClaveProducto(text);
+                  setProductoValid(false);
+                }}
+                onSelect={item => {
+                  setClaveProducto(item.prdclave);
+                  setDescripcion(item.prdnombre || '');
+                  setUnidad(item.prdualid || '');
+                  setInner(item.prdinner?.toString() || '');
+                  setInfprdid(item.prdid.toString());
+                  setProductoValid(true);
+                }}
+                onSubmitEditing={(text, matched) => {
+                  if (!matched) {
+                    setClaveProducto('');
+                    setDescripcion('');
+                    setUnidad('');
+                    setInner('');
+                    setInfprdid('');
+                    setProductoValid(false);
+                    Alert.alert(
+                      'Producto no encontrado',
+                      `No se encontró producto para "${text}".`,
+                      [
+                        {
+                          text: 'OK',
+                          onPress: () =>
+                            setTimeout(() => productoRef.current?.focus(), 100),
+                        },
+                      ],
+                    );
+                  }
+                }}
+                placeholder="Clave o descripción *"
+                hasError={isMissing(claveProducto)}
+                hasValid={productoValid}
+              />
+            </View>
           </View>
 
           <View style={styles.row}>
@@ -424,6 +661,7 @@ export const InventarioFisicoScreen = () => {
             <TextInput
               style={[styles.input, styles.halfInput]}
               placeholder="Lote"
+              placeholderTextColor="#94A3B8"
               value={lote}
               onChangeText={(text: string) => setLote(text)}
             />
@@ -436,12 +674,12 @@ export const InventarioFisicoScreen = () => {
               <DatePicker
                 modal
                 open={open}
-                date={new Date()} // Fecha inicial
+                date={new Date()}
                 mode="date"
-                locale="es" // Idioma español
+                locale="es"
                 onConfirm={(selectedDate: Date) => {
                   setOpen(false);
-                  setFechaCaducidad(formatDate(selectedDate)); // Actualiza la fecha
+                  setFechaCaducidad(formatDate(selectedDate));
                 }}
                 onCancel={() => setOpen(false)}
               />
@@ -449,29 +687,34 @@ export const InventarioFisicoScreen = () => {
           </View>
 
           <View style={styles.row}>
-            <TextInput
-              style={[styles.input, styles.halfInput]}
-              placeholder="Cajas"
-              value={cajas}
-              onChangeText={text => setCajas(text)}
-              onBlur={calcularCantidad}
-            />
-            <TextInput
-              style={[styles.input, styles.halfInput]}
-              placeholder="Sueltas"
-              value={sueltas}
-              onChangeText={text => setSueltas(text)}
-              onBlur={calcularCantidad}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <TextInput
-              style={styles.input}
-              placeholder="Cantidad"
-              value={cantidadTotal}
-              editable={false}
-            />
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.fieldLabel}>Cajas</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={cajas}
+                onChangeText={handleNumericChange(setCajas)}
+                onBlur={calcularCantidad}
+              />
+            </View>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.fieldLabel}>Sueltas</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={sueltas}
+                onChangeText={handleNumericChange(setSueltas)}
+                onBlur={calcularCantidad}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fieldLabel}>Cantidad</Text>
+              <TextInput
+                style={[styles.input, styles.inputDisabled]}
+                value={cantidadTotal}
+                editable={false}
+              />
+            </View>
           </View>
 
           <View style={styles.buttonsContainer}>
@@ -487,6 +730,7 @@ export const InventarioFisicoScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
+        </ScrollView>
       </Layout>
     </MainLayout>
   );
@@ -494,7 +738,6 @@ export const InventarioFisicoScreen = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 10,
   },
   row: {
@@ -512,7 +755,6 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   input: {
-    // flex: 1,
     width: '99%',
     height: 50,
     borderWidth: 1,
@@ -524,6 +766,11 @@ const styles = StyleSheet.create({
   inputDisabled: {
     backgroundColor: '#F8F8FF',
     pointerEvents: 'none',
+  },
+  inputValidPallet: {
+    borderColor: '#16A34A',
+    borderWidth: 1.5,
+    backgroundColor: '#F0FDF4',
   },
   halfInput: {
     flex: 1,
@@ -542,11 +789,11 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     backgroundColor: '#007bff',
-    flex: 3, // 75% del espacio
+    flex: 3,
   },
   clearButton: {
     backgroundColor: '#f44336',
-    flex: 1, // 25% del espacio
+    flex: 1,
   },
   buttonText: {
     color: '#fff',
@@ -555,17 +802,37 @@ const styles = StyleSheet.create({
   },
   datePlaceholder: {
     fontSize: 12,
-    color: '#999', // Color para el placeholder
+    color: '#999',
     textAlign: 'center',
     paddingVertical: 17,
     paddingRight: 45,
   },
   selectRow: {
-    zIndex: 3000, // ZIndex alto para los primeros dos selects
-    elevation: 3000, // Elevation alto para Android
+    zIndex: 3000,
+    elevation: 3000,
   },
   selectRowLower: {
-    zIndex: 2000, // ZIndex más bajo para los selects inferiores
-    elevation: 2000, // Elevation más bajo para Android
+    zIndex: 2000,
+    elevation: 2000,
+  },
+  ubicacionRow: {
+    zIndex: 1500,
+    elevation: 1500,
+  },
+  required: {
+    color: '#EF4444',
+    fontWeight: '800',
+  },
+  inputError: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+    letterSpacing: 0.4,
+    marginBottom: 4,
   },
 });

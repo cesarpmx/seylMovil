@@ -6,12 +6,14 @@ interface ConteoSelectProps {
   conteosArr: {conteoValue: number; conteoName: string}[] | undefined;
   onSelect?: (value: number | null) => void;
   editableConteo: boolean;
+  hasError?: boolean;
 }
 
 export const SelectConteo: React.FC<ConteoSelectProps> = ({
   conteosArr = [],
   onSelect,
   editableConteo,
+  hasError = false,
 }) => {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<number | null>(null);
@@ -34,9 +36,11 @@ export const SelectConteo: React.FC<ConteoSelectProps> = ({
       setValue={setValue}
       setItems={setItems}
       placeholder="Selecciona un Conteo"
+      listMode="SCROLLVIEW"
       style={[
         styles.dropdown,
         !editableConteo && styles.nonEditableDropdown, // Aplica estilo no editable si corresponde
+        hasError && styles.errorDropdown,
       ]}
       containerStyle={styles.dropdownContainer}
       dropDownContainerStyle={styles.dropdownMenu}
@@ -71,5 +75,10 @@ const styles = StyleSheet.create({
   nonEditableDropdown: {
     backgroundColor: '#F8F8FF',
     pointerEvents: 'none',
+  },
+  errorDropdown: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
   },
 });

@@ -6,19 +6,25 @@ import { QrReciboMapper } from "../../../infrastructure/mappers/almacen/ingresos
 
 export const getQrRecibo = async (parametros: string) => {
     try {
-      // Construir la URL con el ID de pallet
-      const { data } = await loginApi.get<QrReciboResponse>(
-        `/almacen/qrrecibo/${parametros}`
-      );
+      // OJO: no se debe URL-encode aquí porque el QR trae un query
+      // string completo (?empresa=...&almacen=...&clave=...) que Oracle
+      // interpreta como parámetros. Encodearlo rompía a 404.
+      const url = `/almacen/qrrecibo/${parametros}`;
 
-      console.log(`/almacen/qrrecibo/${parametros}`)
-  
+      console.log('[getQrRecibo] clave recibida:', JSON.stringify(parametros));
+      console.log('[getQrRecibo] longitud:', parametros.length);
+      console.log('[getQrRecibo] URL final:', url);
+
+      const { data } = await loginApi.get<QrReciboResponse>(url);
+
+      console.log('[getQrRecibo] items devueltos:', data?.items?.length ?? 0);
+
       // Validar y mapear los datos
       if (!data || !Array.isArray(data.items)) {
         console.error('Data does not contain items array:', data);
         throw new Error('Invalid response structure');
       }
-  
+
       return data.items.map((item) =>
         QrReciboMapper.qrReciboToEntity(item)
       );

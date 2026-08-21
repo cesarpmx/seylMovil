@@ -6,9 +6,10 @@ interface EmpresaSelectProps {
   empresas: { empid: number; empnomcorto: string }[] | undefined;
   onSelect?: (value: number | null) => void;
   editableEmpresa: boolean;
+  hasError?: boolean;
 }
 
-export const SelectEmpresa: React.FC<EmpresaSelectProps> = ({ empresas = [], onSelect, editableEmpresa }) => {
+export const SelectEmpresa: React.FC<EmpresaSelectProps> = ({ empresas = [], onSelect, editableEmpresa, hasError = false }) => {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<number | null>(null);
   const [items, setItems] = useState([]);
@@ -27,15 +28,14 @@ export const SelectEmpresa: React.FC<EmpresaSelectProps> = ({ empresas = [], onS
       value={value}
       items={items}
       setOpen={setOpen}
-      setValue={(val) => {
-        setValue(val);
-        onSelect?.(val);
-      }}
+      setValue={setValue}
       setItems={setItems}
+      listMode="SCROLLVIEW"
       placeholder="Selecciona una Empresa"
       style={[
         styles.dropdown,
         !editableEmpresa && styles.nonEditableDropdown, // Aplica estilo no editable si corresponde
+        hasError && styles.errorDropdown,
       ]}
       containerStyle={styles.dropdownContainer}
       dropDownContainerStyle={styles.dropdownMenu}
@@ -71,5 +71,10 @@ const styles = StyleSheet.create({
   nonEditableDropdown: {
     backgroundColor: '#F8F8FF',
     pointerEvents: 'none',
+  },
+  errorDropdown: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
   },
 });

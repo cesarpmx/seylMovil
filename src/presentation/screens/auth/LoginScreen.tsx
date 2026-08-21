@@ -1,6 +1,6 @@
 import {Input, Layout, Text, Button} from '@ui-kitten/components';
-import React, {useState} from 'react';
-import {Alert, Image, ScrollView, useWindowDimensions} from 'react-native';
+import React, {useRef, useState} from 'react';
+import {Alert, Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {MyIcon} from '../../components/ui/MyIcon';
 import {StackScreenProps} from '@react-navigation/stack';
 import {RootStackParams} from '../../navigation/StackNavigator';
@@ -15,6 +15,27 @@ export const LoginScreen = ({navigation}: Props) => {
   const [password, setPassword] = useState<string>('');
   const [isPosting, setIsPosting] = useState(false)
   const {login} = useAuthStore();
+
+  // Long-press de 10s sobre el ícono de configuración
+  const HOLD_MS = 10000;
+  const holdTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearHold = () => {
+    if (holdTimeoutRef.current) clearTimeout(holdTimeoutRef.current);
+    holdTimeoutRef.current = null;
+  };
+
+  const handleConfigPressIn = () => {
+    holdTimeoutRef.current = setTimeout(() => {
+      clearHold();
+      navigation.navigate('ConfigScreen');
+    }, HOLD_MS);
+  };
+
+  const handleConfigPressOut = () => {
+    // Si suelta antes de los 10s, se cancela sin navegar
+    clearHold();
+  };
 
   const onLogin = async () => {
     if (email.length === 0 || password.length === 0) {
@@ -37,6 +58,22 @@ export const LoginScreen = ({navigation}: Props) => {
 
   return (
     <Layout style={{flex: 1}}>
+      <View
+        style={{
+          position: 'absolute',
+          top: 50,
+          right: 20,
+          zIndex: 10,
+          alignItems: 'center',
+        }}>
+        <Pressable
+          onPressIn={handleConfigPressIn}
+          onPressOut={handleConfigPressOut}
+          hitSlop={10}
+          style={styles.configBtn}>
+          <MyIcon name="settings-2-outline" size={32} />
+        </Pressable>
+      </View>
       <ScrollView style={{marginHorizontal: 40}}>
         <Layout style={{paddingTop: height * 0.18}}>
           <Layout
@@ -98,3 +135,11 @@ export const LoginScreen = ({navigation}: Props) => {
     </Layout>
   );
 };
+
+const styles = StyleSheet.create({
+  configBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+  },
+});

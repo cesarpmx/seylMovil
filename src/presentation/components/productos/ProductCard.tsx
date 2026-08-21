@@ -1,6 +1,6 @@
 import React from 'react';
-import { Layout, Text } from '@ui-kitten/components';
-import { TouchableOpacity, Image, View, StyleSheet } from 'react-native';
+import {Icon, Text} from '@ui-kitten/components';
+import {TouchableOpacity, View, StyleSheet} from 'react-native';
 
 interface Product {
   prdid: string;
@@ -13,86 +13,146 @@ interface Product {
 
 interface ProductCardProps {
   product: Product;
-  onPress: (product: Product) => void; 
+  onPress: (product: Product) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) => {
+const DetailItem = ({label, value}: {label: string; value: string}) => (
+  <View style={styles.detailItem}>
+    <Text style={styles.detailLabel}>{label}</Text>
+    <Text style={styles.detailValue} numberOfLines={1}>
+      {value ?? '—'}
+    </Text>
+  </View>
+);
+
+const ProductCard: React.FC<ProductCardProps> = ({product, onPress}) => {
   return (
-    <TouchableOpacity onPress={() => onPress(product)}>
-      <Layout style={styles.card}>
-        <Layout style={{ flexDirection: 'row', marginBottom: 10 }}>
-            
-          {/* <Image
-            source={{
-              uri: 'https://via.placeholder.com/150',
-            }}
-            style={styles.image}
-          /> */}
-
-          {/* Detalles del Producto */}
-          <Layout style={{ flex: 1 }}>
-            {/* Título del Producto */}
-            <Text style={styles.productTitle}>{product.prdnombre}</Text>
-
-            {/* Detalles organizados en dos columnas */}
-            <View style={styles.detailsContainer}>
-              <View style={styles.column}>
-                <Text style={styles.productDetail}>ID: {product.prdid}</Text>
-                <Text style={styles.productDetail}>Clave: {product.prdclave}</Text>
-                <Text style={styles.productDetail}>Línea: {product.prdcosto}</Text>
-              </View>
-              <View style={styles.column}>
-                <Text style={styles.productDetail}>Unidad: {product.prdualid}</Text>
-                <Text style={styles.productDetail}>Inner: {product.prdinner}</Text>
-                <Text style={styles.productDetail}>Estatus: {product.prdualid}</Text>
-              </View>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => onPress(product)}
+      style={styles.card}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.iconWrap}>
+          <Icon
+            name="cube-outline"
+            fill="#2563EB"
+            style={{width: 22, height: 22}}
+          />
+        </View>
+        <View style={{flex: 1}}>
+          <Text style={styles.productTitle} numberOfLines={2}>
+            {product.prdnombre}
+          </Text>
+          <View style={styles.keyRow}>
+            <View style={styles.keyChip}>
+              <Text style={styles.keyChipText}>{product.prdclave}</Text>
             </View>
-          </Layout>
-        </Layout>
-      </Layout>
+            <Text style={styles.idText}>ID: {product.prdid}</Text>
+          </View>
+        </View>
+        <Icon
+          name="chevron-right-outline"
+          fill="#94A3B8"
+          style={{width: 22, height: 22}}
+        />
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Details grid */}
+      <View style={styles.detailsGrid}>
+        <DetailItem label="LÍNEA" value={product.prdcosto} />
+        <DetailItem label="UNIDAD" value={product.prdualid} />
+        <DetailItem label="INNER" value={product.prdinner} />
+        <DetailItem label="ESTATUS" value={product.prdualid} />
+      </View>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#ccc',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  image: {
-    width: 100,
-    height: 100,
-    marginRight: 15,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
     borderRadius: 10,
-    marginTop: 10,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   productTitle: {
     fontSize: 15,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 6,
+    letterSpacing: 0.1,
   },
-  productDetail: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  detailsContainer: {
+  keyRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
   },
-  column: {
-    flex: 1,
-    marginHorizontal: 5,
+  keyChip: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  keyChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#334155',
+    letterSpacing: 0.3,
+  },
+  idText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 12,
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  detailItem: {
+    width: '50%',
+    paddingVertical: 4,
+    paddingRight: 8,
+  },
+  detailLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1E293B',
   },
 });
 

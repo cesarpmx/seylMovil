@@ -2,7 +2,8 @@ export interface QrRecibo {
     prrid:       number;
     prrempid:       number;
     prralmid:  string;
-    prrfeccita:  Date;
+    prrfeccita:  string;
+    prrhoracita: string;
     prrlineatr:  string;
     prrplacas:   string;
     prrchofer:   string;

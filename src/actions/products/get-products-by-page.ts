@@ -5,22 +5,46 @@ import { ProductMapper } from "../../infrastructure/mappers/product.mapper";
 import { ServidorProductMapper } from "../../infrastructure/mappers/servidor/ServidorProductMapper";
 
 export const getProductsByPage = async (page: number, descripcion: string, empresa: string, limit: number = 20) => {
+    const offset = page * limit;
+    const desc = (descripcion ?? '').trim();
+    const params = new URLSearchParams({
+        empresa,
+        estatus: 'A',
+        limit: String(limit),
+        offset: String(offset),
+    });
+    if (desc) {
+        params.append('descripcion', desc);
+    }
+    const url = `/productos/productos/?${params.toString()}`;
     try {
-        const { data } = await loginApi.get<ProductsItems>(`/productos/productos/?empresa=${empresa}&estatus=A&descripcion=${descripcion}&limit=${limit}&offset=${page * 10}`);
+        console.log('[getProductsByPage] GET', url);
+        const { data } = await loginApi.get<ProductsItems>(url);
 
         if (!data || !Array.isArray(data.items)) {
-            console.error('Data does not contain items array:', data);
+            console.error('[getProductsByPage] respuesta sin items:', data);
             throw new Error('Invalid response structure');
         }
 
-        const filteredItems = data.items.filter(item => item.prdid !== 0 && item.prdclave !== "-1");
+        const totalrecsFromResponse = Math.max(
+            ...data.items.map(item => Number(item.totalrecs) || 0),
+            0,
+        );
 
+        const filteredItems = data.items.filter(item => item.prdid !== 0 && item.prdclave !== "-1");
         const products = filteredItems.map(item => ProductMapper.productToEntity(item));
 
-        return products;
-    } catch (error) {
-        console.error('Error fetching products:', error);
-        throw new Error("Error getting products");
+        return {
+            products,
+            hasMore: data.hasMore ?? false,
+            totalrecs: totalrecsFromResponse,
+        };
+    } catch (error: any) {
+        console.error('[getProductsByPage] URL:', url);
+        console.error('[getProductsByPage] status:', error?.response?.status);
+        console.error('[getProductsByPage] data:', JSON.stringify(error?.response?.data));
+        console.error('[getProductsByPage] message:', error?.message);
+        throw error;
     }
 };
 

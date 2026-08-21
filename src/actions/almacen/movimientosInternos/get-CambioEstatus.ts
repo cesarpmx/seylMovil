@@ -25,6 +25,10 @@ export const getCambioEstatus = async (empresa: string, almacen: string, idPalle
         CambioEstatusMapper.cambioEstatusToEntity(item)
       );
     } catch (error) {
+      // Oracle ORDS devuelve 555 cuando la consulta no arroja resultados: tratarlo como lista vacía.
+      if (axios.isAxiosError(error) && error.response?.status === 555) {
+        return [];
+      }
       console.error('Error fetching products:', error);
       throw new Error('Error getting products');
     }

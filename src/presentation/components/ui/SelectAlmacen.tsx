@@ -6,12 +6,14 @@ interface AlmacenSelectProps {
   almacenes: {almid: string; almnombre: string}[] | undefined;
   onSelect?: (value: number | null) => void;
   editable: boolean;
+  hasError?: boolean;
 }
 
 export const SelectAlmacen: React.FC<AlmacenSelectProps> = ({
   almacenes = [],
   onSelect,
-  editable
+  editable,
+  hasError = false,
 }) => {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<number | null>(null);
@@ -37,9 +39,11 @@ export const SelectAlmacen: React.FC<AlmacenSelectProps> = ({
       }}
       setItems={setItems}
       placeholder="Selecciona un Almacen"
+      listMode="SCROLLVIEW"
       style={[
         styles.dropdown,
         !editable && styles.nonEditableDropdown, // Aplica estilo no editable si corresponde
+        hasError && styles.errorDropdown,
       ]}
       containerStyle={styles.dropdownContainer}
       dropDownContainerStyle={styles.dropdownMenu}
@@ -74,5 +78,10 @@ const styles = StyleSheet.create({
   nonEditableDropdown: {
     backgroundColor: '#F8F8FF',
     pointerEvents: 'none',
+  },
+  errorDropdown: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
   },
 });

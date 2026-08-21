@@ -39,8 +39,22 @@ export const authLogin = async (nombre: string, clave: string) => {
 
     return result;
 
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    // Log detallado para diagnosticar en Metro qué falló exactamente.
+    if (error?.isAxiosError) {
+      console.error('[authLogin] Axios error →', {
+        message: error.message,
+        code: error.code,
+        url: error.config?.baseURL
+          ? `${error.config.baseURL}${error.config.url ?? ''}`
+          : error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+    } else {
+      console.error('[authLogin] error →', error);
+    }
     return null;
   }
 };

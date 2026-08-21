@@ -1,6 +1,7 @@
 import {Button} from '@ui-kitten/components';
 import React from 'react';
 import {
+  ActivityIndicator,
   Modal,
   View,
   Text,
@@ -36,6 +37,7 @@ interface ProductDetailModalProps {
     prdpeso: number;
   } | null;
   productImage: string;
+  isImageLoading?: boolean;
   onClose: () => void;
 }
 
@@ -43,6 +45,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   visible,
   product,
   productImage,
+  isImageLoading = false,
   onClose,
 }) => {
   if (!product) return null;
@@ -119,13 +122,22 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <Text style={styles.sectionTitle}>Imagen del Producto</Text>
                 <View style={styles.row}>
                   <View style={styles.imageContainer}>
-                    {productImage ? (
+                    {isImageLoading ? (
+                      <View style={styles.imagePlaceholder}>
+                        <ActivityIndicator size="large" color="#2563EB" />
+                        <Text style={styles.imagePlaceholderText}>
+                          Cargando imagen...
+                        </Text>
+                      </View>
+                    ) : productImage ? (
                       <Image
                         source={{uri: productImage}}
                         style={styles.modalImage}
                       />
                     ) : (
-                      <Text>No hay imagen disponible</Text>
+                      <Text style={styles.noImageText}>
+                        No hay imagen disponible
+                      </Text>
                     )}
                   </View>
                   {/* <View style={styles.column}>
@@ -352,6 +364,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: 320,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  imagePlaceholderText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  noImageText: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+    paddingVertical: 8,
   },
 });
 

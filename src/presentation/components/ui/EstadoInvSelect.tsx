@@ -6,9 +6,10 @@ interface EstadoInvSelectProps {
     estatusArry: { statusValue: string; statusName: string }[] | undefined;
   onSelect?: (value: number | null) => void;
   editableEstado: boolean;
+  hasError?: boolean;
 }
 
-export const EstadoInvSelect: React.FC<EstadoInvSelectProps> = ({ estatusArry = [], onSelect, editableEstado }) => {
+export const EstadoInvSelect: React.FC<EstadoInvSelectProps> = ({ estatusArry = [], onSelect, editableEstado, hasError = false }) => {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<number | null>(null);
   const [items, setItems] = useState([]);
@@ -30,9 +31,11 @@ export const EstadoInvSelect: React.FC<EstadoInvSelectProps> = ({ estatusArry = 
       setValue={setValue}
       setItems={setItems}
       placeholder="Selecciona un Estado"
+      listMode="SCROLLVIEW"
       style={[
         styles.dropdown,
         !editableEstado && styles.nonEditableDropdown, // Aplica estilo no editable si corresponde
+        hasError && styles.errorDropdown,
       ]}
       containerStyle={styles.dropdownContainer}
       dropDownContainerStyle={styles.dropdownMenu}
@@ -67,5 +70,10 @@ const styles = StyleSheet.create({
   nonEditableDropdown: {
     backgroundColor: '#F8F8FF',
     pointerEvents: 'none',
+  },
+  errorDropdown: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+    backgroundColor: '#FEF2F2',
   },
 });

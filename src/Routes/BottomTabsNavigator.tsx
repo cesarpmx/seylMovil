@@ -5,7 +5,6 @@ import {SettingScreen} from '../presentation/screens/home/SettingScreen';
 import {TouchableOpacity, StyleSheet} from 'react-native';
 import {Product2Screen} from '../presentation/screens/product/Product2Screen';
 import {MyIcon} from '../presentation/components/ui/MyIcon';
-import {Icon} from '@ui-kitten/components';
 
 const Tab = createBottomTabNavigator();
 
@@ -36,8 +35,8 @@ export const BottomTabsNavigator = ({navigation}) => {
         name="Seyl-WMS"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({color, size}) => (
-            <Icon name="home-outline" size={size} color={color} />
+          tabBarIcon: ({size}) => (
+            <MyIcon name="home-outline" size={size} />
           ),
         }}
       />
@@ -45,8 +44,8 @@ export const BottomTabsNavigator = ({navigation}) => {
         name="Usuario"
         component={Product2Screen}
         options={{
-          tabBarIcon: ({color, size}) => (
-            <Icon name="person-outline" size={size} color={color} />
+          tabBarIcon: ({size}) => (
+            <MyIcon name="person-outline" size={size} />
           ),
         }}
       />
@@ -54,8 +53,8 @@ export const BottomTabsNavigator = ({navigation}) => {
         name="Configuracion"
         component={SettingScreen}
         options={{
-          tabBarIcon: ({color, size}) => (
-            <Icon name="settings-outline" size={size} color={color} />
+          tabBarIcon: ({size}) => (
+            <MyIcon name="settings-outline" size={size} />
           ),
         }}
       />

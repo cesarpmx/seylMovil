@@ -8,6 +8,7 @@ import { SideMenuNavigator } from '../../Routes/SideMenuNavigator';
 import { SettingScreen } from '../screens/home/SettingScreen';
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { BottomTabsNavigator } from '../../Routes/BottomTabsNavigator';
+import { ConfigScreen } from '../screens/config/ConfigScreen';
 
 export type RootStackParams = {
   LoadingScreen: undefined;
@@ -15,6 +16,7 @@ export type RootStackParams = {
   RegisterScreen: undefined;
   Main: undefined; // Aquí usamos el SideMenuNavigator
   ProductScreen: {productId: string};
+  ConfigScreen: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParams>();
@@ -52,6 +54,8 @@ export const StackNavigator = () => {
       <Stack.Screen name="SettingScreen" component={SettingScreen} />
 
       <Stack.Screen name="BottomTabsNavigator" component={BottomTabsNavigator} />
+
+      <Stack.Screen name="ConfigScreen" component={ConfigScreen} />
 
     </Stack.Navigator>
   );

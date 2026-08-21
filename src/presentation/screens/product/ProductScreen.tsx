@@ -23,21 +23,26 @@ import BottonTabBar from '../../components/ui/BottonTabBar';
 import { Products } from '../../../domain/entities/products';
 import ProductCard from '../../components/productos/ProductCard';
 import ProductDetailModal from './ProductDetailModal';
-import QRCodeScanner from 'react-native-qrcode-scanner';
-import { RNCamera } from 'react-native-camera';
-import RNMail from "react-native-smtp-mail";
-import SmtpMailer from "react-native-smtp-mail";
+// import QRCodeScanner from 'react-native-qrcode-scanner'; // no usado aquí; incompatible con new arch
+// import { RNCamera } from 'react-native-camera'; // deprecada, crashea con RN 0.76 new arch
+// import RNMail from "react-native-smtp-mail"; // temporalmente deshabilitado para simulador
+// import SmtpMailer from "react-native-smtp-mail"; // temporalmente deshabilitado para simulador
+const SmtpMailer: any = { sendMail: async () => { throw new Error('SMTP deshabilitado en simulador'); } };
 import ModalCodeScanner from '../../components/ui/ModalCodeScanner';
 
 export const ProductScreen = () => {
+  const PAGE_SIZE = 20;
   const [descripcion, setDescripcion] = useState('');
   const [empresa, setEmpresa] = useState('');
   const [page, setPage] = useState<number>(0);
   const [products, setProducts] = useState<Products[]>([]);
+  const [totalRecs, setTotalRecs] = useState<number>(0);
+  const [hasMore, setHasMore] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Products | null>(null);
   const [productImage, setProductImage] = useState<string>('');
+  const [isImageLoading, setIsImageLoading] = useState(false);
   const [correoDestino, setCorreoDestino] = useState<string>('');
 
   const [isScannerVisible, setScannerVisible] = useState(false);
@@ -46,54 +51,113 @@ export const ProductScreen = () => {
   const [scannedCode, setScannedCode] = useState<string | null>(null);
 
   const [editableEmpresa, setEditableEmpresa] = useState(true);
+  const [empresaError, setEmpresaError] = useState(false);
 
   const { empresas } = useAuthStore();
 
-  const handleEmpresaSelect = (value: string | null) => {
-    console.log('Empresa seleccionada:', value);
-    setEmpresa(value || '');
-  };
-
-  const handleSearch = async () => {
+  const loadProductsByEmpresa = async (
+    empresaValue: string,
+    descripcionValue: string = '',
+    pageValue: number = 0,
+  ) => {
     try {
-      if (!descripcion.trim() && empresa) {
-        console.log('Por favor, ingresa un ID de pallet.');
-        return;
+      setIsLoading(true);
+      const result = await getProductsByPage(pageValue, descripcionValue, empresaValue, PAGE_SIZE);
+      setProducts(result.products);
+      setPage(pageValue);
+
+      const knownTotal = pageValue === 0 ? result.totalrecs : totalRecs;
+      const effectiveTotal = Math.max(
+        knownTotal,
+        pageValue * PAGE_SIZE + result.products.length,
+      );
+      if (pageValue === 0) {
+        setTotalRecs(result.totalrecs);
+      } else if (effectiveTotal > totalRecs) {
+        setTotalRecs(effectiveTotal);
       }
 
-      setIsLoading(true);
-
-      const data = await getProductsByPage(page, descripcion, empresa);
-
-      setProducts(data);
-    } catch (error) {
-      console.error('Error fetching cambio ubicaciones:', error);
+      const computedHasMore =
+        effectiveTotal > 0
+          ? (pageValue + 1) * PAGE_SIZE < effectiveTotal
+          : result.hasMore;
+      setHasMore(computedHasMore);
+    } catch (error: any) {
+      console.error('Error fetching productos:', error?.response?.status, error?.response?.data, error?.message);
+      setProducts([]);
+      if (pageValue === 0) {
+        setTotalRecs(0);
+      }
+      setHasMore(false);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleEmpresaSelect = (value: string | null) => {
+    console.log('Empresa seleccionada:', value);
+    const nuevaEmpresa = value || '';
+    setEmpresa(nuevaEmpresa);
+    setDescripcion('');
+    if (nuevaEmpresa) {
+      setEmpresaError(false);
+      loadProductsByEmpresa(nuevaEmpresa, '', 0);
+    } else {
+      setProducts([]);
+      setTotalRecs(0);
+      setHasMore(false);
+      setPage(0);
+    }
+  };
+
+  const handleSearch = async (overrideText?: string) => {
+    if (!empresa) {
+      setEmpresaError(true);
+      Alert.alert('Info', 'Por favor, seleccione una empresa.');
+      return;
+    }
+    setEmpresaError(false);
+    // Si viene texto del evento (scanner handheld) lo usamos directo,
+    // ya que setDescripcion es async y aún no está en el state.
+    const textoBusqueda =
+      typeof overrideText === 'string' ? overrideText : descripcion;
+    if (typeof overrideText === 'string' && overrideText !== descripcion) {
+      setDescripcion(overrideText);
+    }
+    await loadProductsByEmpresa(empresa, textoBusqueda, 0);
+  };
+
+  const handleNextPage = async () => {
+    if (!empresa || !hasMore || isLoading) return;
+    await loadProductsByEmpresa(empresa, descripcion, page + 1);
+  };
+
+  const handlePrevPage = async () => {
+    if (!empresa || page <= 0 || isLoading) return;
+    await loadProductsByEmpresa(empresa, descripcion, page - 1);
+  };
+
+  const totalPages = totalRecs > 0 ? Math.ceil(totalRecs / PAGE_SIZE) : 0;
 
   const handleProductPress = async (product: Products) => {
     setSelectedProduct(product);
     setModalVisible(true);
 
     setProductImage('');
+    setIsImageLoading(true);
 
     const clave = product.prdid;
 
     try {
-      setIsLoading(true);
-
       const data = await getProductsImage(clave);
 
-      if (data && data.length > 0) {
-        const base64Icon = data[0].pimimagen;
-        setProductImage(base64Icon);
+      if (data && data.length > 0 && data[0].pimimagen) {
+        setProductImage(data[0].pimimagen);
       }
     } catch (error) {
       console.error('Error fetching no se pudo cargar la Imagen:', error);
     } finally {
-      setIsLoading(false);
+      setIsImageLoading(false);
     }
   };
 
@@ -232,7 +296,7 @@ export const ProductScreen = () => {
 
     <MainLayout title="Central de Productos" subTitle="Almacén">
 
-      {isCameraActive ? (
+      {isCameraActive && isScannerVisible ? (
 
         <ModalCodeScanner
 
@@ -255,44 +319,60 @@ export const ProductScreen = () => {
         </Text>
       )}
 
-      <Layout style={{ flex: 1 }}>
+      <Layout style={{flex: 1, backgroundColor: '#F8FAFC'}}>
         <ScrollView
-          style={{ marginHorizontal: 10 }}
+          style={{flex: 1}}
+          contentContainerStyle={{paddingHorizontal: 16, paddingBottom: 24}}
           keyboardShouldPersistTaps="handled">
           <View style={styles.container}>
-            <View style={styles.switchContainer}>
-              <Text style={styles.switchText}>Buscar Producto</Text>
+            {/* Header */}
+            <View style={styles.pageHeader}>
+              <View style={styles.pageHeaderIcon}>
+                <MyIcon name="search-outline" size={22} white />
+              </View>
+              <View style={{flex: 1}}>
+                <Text style={styles.pageTitle}>Buscar producto</Text>
+                <Text style={styles.pageSubtitle}>
+                  Consulta el catálogo por empresa
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.searchContainer}>
-              <View style={styles.row}>
+            {/* Search card */}
+            <View style={styles.searchCard}>
+              <View style={{marginBottom: 12}}>
                 <SelectEmpresa
                   empresas={empresas}
                   onSelect={handleEmpresaSelect}
                   editableEmpresa={editableEmpresa}
+                  hasError={empresaError}
                 />
               </View>
 
-              <View style={styles.row}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Descripción"
-                  value={descripcion}
-                  onChangeText={setDescripcion}
-                  onSubmitEditing={handleSearch}
-                />
+              <View style={styles.searchInputRow}>
+                <View style={styles.inputWrap}>
+                  <MyIcon name="search-outline" size={18} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Buscar por descripción..."
+                    placeholderTextColor="#94A3B8"
+                    value={descripcion}
+                    onChangeText={setDescripcion}
+                    onSubmitEditing={e =>
+                      handleSearch(e?.nativeEvent?.text ?? descripcion)
+                    }
+                    returnKeyType="search"
+                    blurOnSubmit={false}
+                  />
+                </View>
 
                 <TouchableOpacity
-                  style={styles.secondaryButton}
+                  activeOpacity={0.85}
+                  style={styles.cameraButton}
                   onPress={abrirCamara}>
-                  <MyIcon name="camera-outline" size={25} white />
+                  <MyIcon name="camera-outline" size={22} white />
                 </TouchableOpacity>
               </View>
-
-              {/* Mostrar el escáner QR condicionalmente */}
-
-
-
 
               <BottonTabBar
                 onSearchPress={handleSearch}
@@ -306,23 +386,68 @@ export const ProductScreen = () => {
               />
             </View>
 
-            {/* Espaciador */}
-            <Layout />
-
             {isLoading ? (
               <LoadingScreen />
             ) : products.length > 0 ? (
-              products.map(product => (
-                <ProductCard
-                  key={product.prdid}
-                  product={product}
-                  onPress={handleProductPress}
-                />
-              ))
-            ) : (
-              <Text>No hay productos disponibles</Text>
-            )}
+              <>
+                <View style={styles.resultsHeader}>
+                  <View style={styles.countBadge}>
+                    <Text style={styles.countBadgeText}>{totalRecs}</Text>
+                  </View>
+                  <Text style={styles.resultsText}>
+                    Mostrando {page * PAGE_SIZE + 1}–
+                    {page * PAGE_SIZE + products.length}
+                  </Text>
+                </View>
 
+                {products.map(product => (
+                  <ProductCard
+                    key={product.prdid}
+                    product={product}
+                    onPress={handleProductPress}
+                  />
+                ))}
+
+                <View style={styles.paginationContainer}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={[
+                      styles.pageButton,
+                      (page <= 0 || isLoading) && styles.pageButtonDisabled,
+                    ]}
+                    disabled={page <= 0 || isLoading}
+                    onPress={handlePrevPage}>
+                    <Text style={styles.pageButtonText}>‹ Anterior</Text>
+                  </TouchableOpacity>
+                  <View style={styles.pageInfoWrap}>
+                    <Text style={styles.pageInfoNumber}>{page + 1}</Text>
+                    {totalPages > 0 && (
+                      <Text style={styles.pageInfoTotal}>de {totalPages}</Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={[
+                      styles.pageButton,
+                      (!hasMore || isLoading) && styles.pageButtonDisabled,
+                    ]}
+                    disabled={!hasMore || isLoading}
+                    onPress={handleNextPage}>
+                    <Text style={styles.pageButtonText}>Siguiente ›</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconWrap}>
+                  <MyIcon name="cube-outline" size={32} />
+                </View>
+                <Text style={styles.emptyTitle}>Sin productos</Text>
+                <Text style={styles.emptySubtitle}>
+                  Selecciona una empresa y realiza tu búsqueda.
+                </Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       </Layout>
@@ -331,6 +456,7 @@ export const ProductScreen = () => {
         visible={modalVisible}
         product={selectedProduct}
         productImage={productImage}
+        isImageLoading={isImageLoading}
         onClose={() => setModalVisible(false)}
       />
     </MainLayout>
@@ -340,50 +466,169 @@ export const ProductScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10,
+    paddingTop: 16,
   },
-  switchContainer: {
+  pageHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
-  switchText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
+  pageHeaderIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#2563EB',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  searchContainer: {
-    marginBottom: 20,
+  pageTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
   },
-  row: {
+  pageSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  searchCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  searchInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
     marginBottom: 10,
+  },
+  inputWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 46,
   },
   input: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 50,
-    backgroundColor: '#fff',
-    marginRight: 5,
+    fontSize: 14,
+    color: '#0F172A',
+    marginLeft: 6,
+    padding: 0,
   },
-  primaryButton: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#007bff',
+  cameraButton: {
+    width: 46,
+    height: 46,
+    backgroundColor: '#0F172A',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
   },
-  secondaryButton: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#6c757d',
-    justifyContent: 'center',
+  resultsHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
+    gap: 8,
+    marginBottom: 12,
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  countBadge: {
+    minWidth: 32,
+    height: 24,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  resultsText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+    paddingHorizontal: 4,
+  },
+  pageButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    backgroundColor: '#2563EB',
+    borderRadius: 10,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#CBD5E1',
+  },
+  pageButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  pageInfoWrap: {
+    alignItems: 'center',
+  },
+  pageInfoNumber: {
+    fontSize: 18,
+    color: '#0F172A',
+    fontWeight: '800',
+  },
+  pageInfoTotal: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: -2,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
   },
 });

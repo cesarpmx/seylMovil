@@ -3,6 +3,12 @@ android/build/
 android/app/build/
 android/app/.cxx/
 ios/build/
+ios/Pods/
+ios/.xcode.env.local
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+.DS_Store
 *.keystore
 *.jks
 *.log
