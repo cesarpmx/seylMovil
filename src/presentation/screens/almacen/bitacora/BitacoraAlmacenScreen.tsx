@@ -621,6 +621,7 @@ export const BitacoraAlmacenScreen = () => {
                 {guardando ? 'Guardando…' : 'Guardar'}
               </Text>
             </TouchableOpacity>
+            {/* Botón de envío de correo manual comentado — el envío automático post-guardar ya funciona.
             <TouchableOpacity
               activeOpacity={0.85}
               style={[styles.mailBtn, (guardando || probandoCorreo) && styles.btnDisabled]}
@@ -631,6 +632,7 @@ export const BitacoraAlmacenScreen = () => {
                 {probandoCorreo ? '…' : 'Correo'}
               </Text>
             </TouchableOpacity>
+            */}
             <TouchableOpacity
               activeOpacity={0.85}
               style={[styles.clearBtn, guardando && styles.btnDisabled]}

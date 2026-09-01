@@ -72,6 +72,7 @@ export const SurtidoPlScreen = () => {
   const [cajasConfirm, setCajasConfirm] = useState('0');
   const [sueltasConfirm, setSueltasConfirm] = useState('0');
   const [lote, setLote] = useState('');
+  const [pedimento, setPedimento] = useState('');
   const [fechaCaducidad, setFechaCaducidad] = useState('');
   const [unidadesPedido, setUnidadesPedido] = useState('');
   const [unidadesSurtidoAcum, setUnidadesSurtidoAcum] = useState('');
@@ -100,6 +101,7 @@ export const SurtidoPlScreen = () => {
     setInner(String(it.prdinner));
     setUbicacion(it.racubiid || '');
     setLote(it.raclote || '');
+    setPedimento(it.racpedimento || '');
     setFechaCaducidad(formatDateISO(it.racfeccaducidad));
     setUnidadesPedido(String(it.dprcantidad));
     setUnidadesSurtidoAcum(String(it.dprsurtido ?? 0));
@@ -514,6 +516,7 @@ export const SurtidoPlScreen = () => {
     setCajasConfirm('0');
     setSueltasConfirm('0');
     setLote('');
+    setPedimento('');
     setFechaCaducidad('');
     setUnidadesPedido('');
     setUnidadesSurtidoAcum('');
@@ -733,6 +736,22 @@ export const SurtidoPlScreen = () => {
                   <View style={styles.metaStat}>
                     <Text style={styles.metaStatLabel}>Unidad</Text>
                     <Text style={styles.metaStatValue}>{unidad || '—'}</Text>
+                  </View>
+                </View>
+                <View style={styles.metaDivider} />
+                <View style={styles.metaRow}>
+                  <View style={styles.metaStat}>
+                    <Text style={styles.metaStatLabel}>Lote</Text>
+                    <Text style={styles.metaStatValue} numberOfLines={1}>
+                      {lote || '—'}
+                    </Text>
+                  </View>
+                  <View style={styles.metaStatDivider} />
+                  <View style={styles.metaStat}>
+                    <Text style={styles.metaStatLabel}>Pedimento</Text>
+                    <Text style={styles.metaStatValue} numberOfLines={1}>
+                      {pedimento || '—'}
+                    </Text>
                   </View>
                 </View>
               </View>

@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import {
   Text,
   View,
-  TouchableOpacity,
   StyleSheet,
   Image,
 } from 'react-native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { Icon } from '@ui-kitten/components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -162,9 +162,10 @@ const CustomDrawerContent: React.FC<Props> = ({ modules, navigation }) => {
       const isLeaf = !hasChildren && !!module.modcontexto;
 
       return (
-        <View key={module.modnombre}>
+        <View key={`${indentLevel}-${module.modnombre}`}>
           <TouchableOpacity
             activeOpacity={0.7}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             onPress={() => {
               if (!hasChildren && module.modcontexto) {
                 navigation.navigate(module.modcontexto);
@@ -252,6 +253,8 @@ const CustomDrawerContent: React.FC<Props> = ({ modules, navigation }) => {
         styles.scrollContent,
         { paddingBottom: insets.bottom + 12 },
       ]}
+      keyboardShouldPersistTaps="handled"
+      removeClippedSubviews={false}
       showsVerticalScrollIndicator={false}>
       {/* Header / Branding */}
       <View
@@ -351,6 +354,7 @@ const styles = StyleSheet.create({
   menuItemRoot: { backgroundColor: 'transparent' },
   menuItemChild: { backgroundColor: 'transparent' },
   menuItemExpanded: { backgroundColor: '#F1F5F9' },
+  menuItemPressed: { backgroundColor: '#E2E8F0', opacity: 0.85 },
   leftGroup: {
     flexDirection: 'row',
     alignItems: 'center',

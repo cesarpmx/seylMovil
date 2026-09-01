@@ -1,10 +1,10 @@
 import React, {useState, useEffect} from 'react';
-import DropDownPicker from 'react-native-dropdown-picker';
-import {StyleSheet} from 'react-native';
+import {Dropdown} from 'react-native-element-dropdown';
+import {StyleSheet, View} from 'react-native';
 
 interface AlmacenSelectProps {
   almacenes: {almid: string; almnombre: string}[] | undefined;
-  onSelect?: (value: number | null) => void;
+  onSelect?: (value: string | null) => void;
   editable: boolean;
   hasError?: boolean;
 }
@@ -15,47 +15,50 @@ export const SelectAlmacen: React.FC<AlmacenSelectProps> = ({
   editable,
   hasError = false,
 }) => {
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<number | null>(null);
-  const [items, setItems] = useState([]);
+  const [value, setValue] = useState<string | null>(null);
+  const [items, setItems] = useState<{label: string; value: string}[]>([]);
 
   useEffect(() => {
-    const formattedItems = almacenes.map(alm => ({
-      label: alm.almnombre,
-      value: alm.almid,
-    }));
-    setItems(formattedItems);
+    setItems(
+      almacenes.map(alm => ({
+        label: alm.almnombre,
+        value: alm.almid,
+      })),
+    );
   }, [almacenes]);
 
   return (
-    <DropDownPicker
-      open={open}
-      value={value}
-      items={items}
-      setOpen={setOpen}
-      setValue={(val) => {
-        setValue(val);
-        onSelect?.(val);
-      }}
-      setItems={setItems}
-      placeholder="Selecciona un Almacen"
-      listMode="SCROLLVIEW"
-      style={[
-        styles.dropdown,
-        !editable && styles.nonEditableDropdown, // Aplica estilo no editable si corresponde
-        hasError && styles.errorDropdown,
-      ]}
-      containerStyle={styles.dropdownContainer}
-      dropDownContainerStyle={styles.dropdownMenu}
-      textStyle={styles.dropdownText}
-      onChangeValue={onSelect}
-      disabled={!editable} // Desactiva interacción si no es editable
-    />
+    <View style={styles.wrapper}>
+      <Dropdown
+        style={[
+          styles.dropdown,
+          !editable && styles.nonEditableDropdown,
+          hasError && styles.errorDropdown,
+        ]}
+        placeholderStyle={styles.placeholderStyle}
+        selectedTextStyle={styles.selectedTextStyle}
+        containerStyle={styles.dropdownMenu}
+        itemTextStyle={styles.itemTextStyle}
+        activeColor="#EFF6FF"
+        data={items}
+        maxHeight={250}
+        labelField="label"
+        valueField="value"
+        placeholder="Selecciona un Almacen"
+        value={value}
+        disable={!editable}
+        dropdownPosition="bottom"
+        onChange={item => {
+          setValue(item.value);
+          onSelect?.(item.value);
+        }}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  dropdownContainer: {
+  wrapper: {
     flex: 1,
     marginRight: 5,
   },
@@ -65,19 +68,27 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     height: 40,
+    backgroundColor: '#fff',
   },
   dropdownMenu: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
   },
-  dropdownText: {
+  placeholderStyle: {
+    fontSize: 14,
+    color: '#999',
+  },
+  selectedTextStyle: {
+    fontSize: 14,
+    color: '#333',
+  },
+  itemTextStyle: {
     fontSize: 14,
     color: '#333',
   },
   nonEditableDropdown: {
     backgroundColor: '#F8F8FF',
-    pointerEvents: 'none',
   },
   errorDropdown: {
     borderColor: '#EF4444',

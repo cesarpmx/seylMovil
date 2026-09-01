@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import DropDownPicker from 'react-native-dropdown-picker';
-import { StyleSheet } from 'react-native';
+import { Dropdown } from 'react-native-element-dropdown';
+import { StyleSheet, View } from 'react-native';
 
 interface EmpresaSelectProps {
   empresas: { empid: number; empnomcorto: string }[] | undefined;
@@ -9,46 +9,56 @@ interface EmpresaSelectProps {
   hasError?: boolean;
 }
 
-export const SelectEmpresa: React.FC<EmpresaSelectProps> = ({ empresas = [], onSelect, editableEmpresa, hasError = false }) => {
-  const [open, setOpen] = useState(false);
+export const SelectEmpresa: React.FC<EmpresaSelectProps> = ({
+  empresas = [],
+  onSelect,
+  editableEmpresa,
+  hasError = false,
+}) => {
   const [value, setValue] = useState<number | null>(null);
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState<{ label: string; value: number }[]>([]);
 
   useEffect(() => {
-    const formattedItems = empresas.map(emp => ({
-      label: emp.empnomcorto,
-      value: emp.empid,
-    }));
-    setItems(formattedItems);
+    setItems(
+      empresas.map(emp => ({
+        label: emp.empnomcorto,
+        value: emp.empid,
+      })),
+    );
   }, [empresas]);
 
   return (
-    <DropDownPicker
-      open={open}
-      value={value}
-      items={items}
-      setOpen={setOpen}
-      setValue={setValue}
-      setItems={setItems}
-      listMode="SCROLLVIEW"
-      placeholder="Selecciona una Empresa"
-      style={[
-        styles.dropdown,
-        !editableEmpresa && styles.nonEditableDropdown, // Aplica estilo no editable si corresponde
-        hasError && styles.errorDropdown,
-      ]}
-      containerStyle={styles.dropdownContainer}
-      dropDownContainerStyle={styles.dropdownMenu}
-      textStyle={styles.dropdownText}
-      onChangeValue={onSelect}
-      disabled={!editableEmpresa} 
-      // disabled={!editableEmpresa} // Desactiva interacción si no es editable
-    />
+    <View style={styles.wrapper}>
+      <Dropdown
+        style={[
+          styles.dropdown,
+          !editableEmpresa && styles.nonEditableDropdown,
+          hasError && styles.errorDropdown,
+        ]}
+        placeholderStyle={styles.placeholderStyle}
+        selectedTextStyle={styles.selectedTextStyle}
+        containerStyle={styles.dropdownMenu}
+        itemTextStyle={styles.itemTextStyle}
+        activeColor="#EFF6FF"
+        data={items}
+        maxHeight={250}
+        labelField="label"
+        valueField="value"
+        placeholder="Selecciona una Empresa"
+        value={value}
+        disable={!editableEmpresa}
+        dropdownPosition="bottom"
+        onChange={item => {
+          setValue(item.value);
+          onSelect?.(item.value);
+        }}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  dropdownContainer: {
+  wrapper: {
     flex: 1,
     marginRight: 5,
   },
@@ -58,19 +68,27 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     height: 40,
+    backgroundColor: '#fff',
   },
   dropdownMenu: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
   },
-  dropdownText: {
+  placeholderStyle: {
+    fontSize: 14,
+    color: '#999',
+  },
+  selectedTextStyle: {
+    fontSize: 14,
+    color: '#333',
+  },
+  itemTextStyle: {
     fontSize: 14,
     color: '#333',
   },
   nonEditableDropdown: {
     backgroundColor: '#F8F8FF',
-    pointerEvents: 'none',
   },
   errorDropdown: {
     borderColor: '#EF4444',

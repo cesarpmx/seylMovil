@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
-import DropDownPicker from 'react-native-dropdown-picker';
-import {StyleSheet} from 'react-native';
+import {Dropdown} from 'react-native-element-dropdown';
+import {StyleSheet, View} from 'react-native';
 
 interface ConteoSelectProps {
   conteosArr: {conteoValue: number; conteoName: string}[] | undefined;
@@ -15,44 +15,50 @@ export const SelectConteo: React.FC<ConteoSelectProps> = ({
   editableConteo,
   hasError = false,
 }) => {
-  const [open, setOpen] = useState(false);
   const [value, setValue] = useState<number | null>(null);
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState<{label: string; value: number}[]>([]);
 
   useEffect(() => {
-    const formattedItems = conteosArr.map(cont => ({
-      label: cont.conteoName,
-      value: cont.conteoValue,
-    }));
-    setItems(formattedItems);
+    setItems(
+      conteosArr.map(cont => ({
+        label: cont.conteoName,
+        value: cont.conteoValue,
+      })),
+    );
   }, [conteosArr]);
 
   return (
-    <DropDownPicker
-      open={open}
-      value={value}
-      items={items}
-      setOpen={setOpen}
-      setValue={setValue}
-      setItems={setItems}
-      placeholder="Selecciona un Conteo"
-      listMode="SCROLLVIEW"
-      style={[
-        styles.dropdown,
-        !editableConteo && styles.nonEditableDropdown, // Aplica estilo no editable si corresponde
-        hasError && styles.errorDropdown,
-      ]}
-      containerStyle={styles.dropdownContainer}
-      dropDownContainerStyle={styles.dropdownMenu}
-      textStyle={styles.dropdownText}
-      onChangeValue={onSelect}
-      disabled={!editableConteo}
-    />
+    <View style={styles.wrapper}>
+      <Dropdown
+        style={[
+          styles.dropdown,
+          !editableConteo && styles.nonEditableDropdown,
+          hasError && styles.errorDropdown,
+        ]}
+        placeholderStyle={styles.placeholderStyle}
+        selectedTextStyle={styles.selectedTextStyle}
+        containerStyle={styles.dropdownMenu}
+        itemTextStyle={styles.itemTextStyle}
+        activeColor="#EFF6FF"
+        data={items}
+        maxHeight={250}
+        labelField="label"
+        valueField="value"
+        placeholder="Selecciona un Conteo"
+        value={value}
+        disable={!editableConteo}
+        dropdownPosition="bottom"
+        onChange={item => {
+          setValue(item.value);
+          onSelect?.(item.value);
+        }}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  dropdownContainer: {
+  wrapper: {
     flex: 1,
     marginRight: 5,
   },
@@ -62,19 +68,27 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     height: 40,
+    backgroundColor: '#fff',
   },
   dropdownMenu: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
   },
-  dropdownText: {
+  placeholderStyle: {
+    fontSize: 14,
+    color: '#999',
+  },
+  selectedTextStyle: {
+    fontSize: 14,
+    color: '#333',
+  },
+  itemTextStyle: {
     fontSize: 14,
     color: '#333',
   },
   nonEditableDropdown: {
     backgroundColor: '#F8F8FF',
-    pointerEvents: 'none',
   },
   errorDropdown: {
     borderColor: '#EF4444',

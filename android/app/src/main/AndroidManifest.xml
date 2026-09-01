@@ -4,8 +4,12 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
 
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- Android 13+ (API 33): permiso granular para acceder a imágenes de la galería -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Android 14+ (API 34): permiso para acceso "seleccionadas" desde el visor del sistema -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <uses-feature android:name="android.hardware.camera" />
 <uses-feature android:name="android.hardware.camera.autofocus" />
 

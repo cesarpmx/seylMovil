@@ -47,8 +47,9 @@ export const SideMenuNavigator = () => {
         <CustomDrawerContent {...props} modules={modules} />
       )}
       screenOptions={{
-        drawerType: 'slide',
-        headerShown: false, 
+        drawerType: 'front',
+        headerShown: false,
+        overlayColor: 'rgba(15, 23, 42, 0.35)',
         drawerStyle: {
           backgroundColor: '#fff',
           width: 240,

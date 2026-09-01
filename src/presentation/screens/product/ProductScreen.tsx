@@ -18,6 +18,8 @@ import {
   getProductsImage,
   getServidor,
 } from '../../../actions/products/get-products-by-page';
+import { postProductoImagen } from '../../../actions/products/post-productoImagen';
+import { launchCamera, launchImageLibrary, ImageLibraryOptions, CameraOptions } from 'react-native-image-picker';
 import { LoadingScreen } from '../loading/LoadingScreen';
 import BottonTabBar from '../../components/ui/BottonTabBar';
 import { Products } from '../../../domain/entities/products';
@@ -42,7 +44,9 @@ export const ProductScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Products | null>(null);
   const [productImage, setProductImage] = useState<string>('');
+  const [productImageId, setProductImageId] = useState<string>('');
   const [isImageLoading, setIsImageLoading] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [correoDestino, setCorreoDestino] = useState<string>('');
 
   const [isScannerVisible, setScannerVisible] = useState(false);
@@ -53,7 +57,34 @@ export const ProductScreen = () => {
   const [editableEmpresa, setEditableEmpresa] = useState(true);
   const [empresaError, setEmpresaError] = useState(false);
 
-  const { empresas } = useAuthStore();
+  const { empresas, usuid, modules } = useAuthStore();
+
+  // Busca recursivamente el umoacceso para un contexto dado.
+  // Los submódulos vienen en `modulos` o `subModulos` según el nivel.
+  const findAccesoByContexto = (
+    tree: any[] | undefined,
+    contexto: string,
+  ): number => {
+    if (!Array.isArray(tree)) return 0;
+    for (const m of tree) {
+      if (m?.modcontexto === contexto) return Number(m?.umoacceso) || 0;
+      const hijos = [
+        ...(Array.isArray(m?.modulos) ? m.modulos : []),
+        ...(Array.isArray(m?.subModulos) ? m.subModulos : []),
+      ];
+      if (hijos.length > 0) {
+        const encontrado = findAccesoByContexto(hijos, contexto);
+        if (encontrado > 0) return encontrado;
+      }
+    }
+    return 0;
+  };
+
+  // Nivel de acceso al módulo de central de productos → aplica a la imagen.
+  // Reglas del backend: acceso ≥ 2 puede INSERT, acceso ≥ 3 puede UPDATE.
+  const imagenAcceso = findAccesoByContexto(modules, '/almacen/productos/central/');
+  const canInsertImage = imagenAcceso >= 2;
+  const canUpdateImage = imagenAcceso >= 3;
 
   const loadProductsByEmpresa = async (
     empresaValue: string,
@@ -144,6 +175,7 @@ export const ProductScreen = () => {
     setModalVisible(true);
 
     setProductImage('');
+    setProductImageId('');
     setIsImageLoading(true);
 
     const clave = product.prdid;
@@ -153,6 +185,9 @@ export const ProductScreen = () => {
 
       if (data && data.length > 0 && data[0].pimimagen) {
         setProductImage(data[0].pimimagen);
+        if (data[0].pimid !== undefined && data[0].pimid !== null) {
+          setProductImageId(String(data[0].pimid));
+        }
       }
     } catch (error) {
       console.error('Error fetching no se pudo cargar la Imagen:', error);
@@ -165,6 +200,83 @@ export const ProductScreen = () => {
     //  console.log(isSearchByPallet)
     resetScanner();
     setScannerVisible(true); // Muestra el modal para ingresar la ubicación global
+  };
+
+  // Sube la imagen al backend con el mismo shape que el front web:
+  // POST /archivos/productos/?clave={clave}  body: { pimprdid, pimimagen }
+  const subirImagenProducto = async (base64WithPrefix: string) => {
+    if (!selectedProduct) return;
+    try {
+      setIsUploadingImage(true);
+      const resp = await postProductoImagen(selectedProduct.prdid, {
+        pimprdid: String(selectedProduct.prdid),
+        pimimagen: base64WithPrefix,
+        // Si ya existía una imagen previa, mandamos su pimid para que el
+        // backend ACTUALICE en vez de insertar un registro nuevo.
+        ...(productImageId ? { pimid: productImageId } : {}),
+        // Usuario en sesión → el backend valida permisos sobre el contexto.
+        idUsuario: String(usuid ?? ''),
+      });
+      console.log('[subirImagenProducto] respuesta backend:', JSON.stringify(resp));
+      const ok = resp?.success === true || String(resp?.success) === 'true';
+      if (ok) {
+        setProductImage(base64WithPrefix);
+        Alert.alert('Éxito', resp?.message || 'Imagen subida correctamente.');
+      } else {
+        // Casos 210/211/212 → llegan como respuesta "exitosa" HTTP pero con success:false.
+        Alert.alert('Sin permisos', resp?.message || 'No se pudo subir la imagen.');
+      }
+    } catch (e: any) {
+      console.error('[subirImagenProducto] error:', e?.message);
+      // Si el backend respondió con JSON (400/401/403/409/500), mostramos su mensaje real.
+      const backendMsg = e?.response?.data?.message;
+      Alert.alert('Error', backendMsg || 'Ocurrió un error al subir la imagen.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handlePickFromCamera = async () => {
+    const options: CameraOptions = {
+      mediaType: 'photo',
+      includeBase64: true,
+      maxWidth: 750,
+      maxHeight: 550,
+      quality: 0.9,
+      saveToPhotos: false,
+      cameraType: 'back',
+    };
+    const result = await launchCamera(options);
+    if (result.didCancel) return;
+    if (result.errorCode) {
+      Alert.alert('Cámara', result.errorMessage || 'No se pudo abrir la cámara.');
+      return;
+    }
+    const photo = result.assets?.[0];
+    if (!photo?.base64) return;
+    const mime = photo.type || 'image/jpeg';
+    await subirImagenProducto(`data:${mime};base64,${photo.base64}`);
+  };
+
+  const handlePickFromGallery = async () => {
+    const options: ImageLibraryOptions = {
+      mediaType: 'photo',
+      includeBase64: true,
+      maxWidth: 750,
+      maxHeight: 550,
+      quality: 0.9,
+      selectionLimit: 1,
+    };
+    const result = await launchImageLibrary(options);
+    if (result.didCancel) return;
+    if (result.errorCode) {
+      Alert.alert('Galería', result.errorMessage || 'No se pudo abrir la galería.');
+      return;
+    }
+    const photo = result.assets?.[0];
+    if (!photo?.base64) return;
+    const mime = photo.type || 'image/jpeg';
+    await subirImagenProducto(`data:${mime};base64,${photo.base64}`);
   };
 
 
@@ -457,6 +569,11 @@ export const ProductScreen = () => {
         product={selectedProduct}
         productImage={productImage}
         isImageLoading={isImageLoading}
+        isUploading={isUploadingImage}
+        canInsertImage={canInsertImage}
+        canUpdateImage={canUpdateImage}
+        onPickImageCamera={handlePickFromCamera}
+        onPickImageGallery={handlePickFromGallery}
         onClose={() => setModalVisible(false)}
       />
     </MainLayout>
