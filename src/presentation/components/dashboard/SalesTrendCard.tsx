@@ -12,7 +12,29 @@ import {cardStyles, colors, formatMoney, formatPercent} from './dashboardTheme';
 
 const Y_AXIS_WIDTH = 40;
 const CHART_HEIGHT = 190;
-const STEP = 10_000_000;
+const MAX_SECTIONS = 5;
+
+// Escala "bonita" (1, 2, 2.5, 5 × 10^n): con filtros por empresa el monto
+// puede ir de miles a cientos de millones; un paso fijo aplana la gráfica.
+const niceStep = (max: number) => {
+  if (max <= 0) {
+    return 1;
+  }
+  const raw = max / MAX_SECTIONS;
+  const pow = 10 ** Math.floor(Math.log10(raw));
+  const factor = [1, 2, 2.5, 5, 10].find(f => f * pow >= raw) ?? 10;
+  return factor * pow;
+};
+
+const formatAxis = (value: number) => {
+  if (value >= 1e6) {
+    return `$${+(value / 1e6).toFixed(1)}M`;
+  }
+  if (value >= 1e3) {
+    return `$${+(value / 1e3).toFixed(0)}K`;
+  }
+  return `$${value}`;
+};
 // Márgenes horizontales de la pantalla y de la tarjeta (16 + 16 por lado).
 const HORIZONTAL_INSETS = 64;
 
@@ -45,11 +67,12 @@ export const SalesTrendCard = ({data}: {data: TendenciaVentas[]}) => {
     [data],
   );
 
-  const maxValue = useMemo(() => {
+  const {maxValue, step} = useMemo(() => {
     const max = Math.max(
       ...data.flatMap(d => [d.ventas, d.meta, d.ventasAnterior]),
     );
-    return Math.max(Math.ceil(max / STEP), 1) * STEP;
+    const s = niceStep(max);
+    return {maxValue: Math.max(Math.ceil(max / s), 1) * s, step: s};
   }, [data]);
 
   const current = data[selected];
@@ -100,15 +123,15 @@ export const SalesTrendCard = ({data}: {data: TendenciaVentas[]}) => {
           barBorderTopLeftRadius={4}
           barBorderTopRightRadius={4}
           maxValue={maxValue}
-          stepValue={STEP}
-          noOfSections={maxValue / STEP}
+          stepValue={step}
+          noOfSections={Math.round(maxValue / step)}
           yAxisLabelWidth={Y_AXIS_WIDTH}
           yAxisThickness={0}
           xAxisThickness={1}
           xAxisColor={colors.baseline}
           rulesColor={colors.grid}
           rulesType="solid"
-          formatYLabel={label => `$${Number(label) / 1e6}M`}
+          formatYLabel={label => formatAxis(Number(label))}
           yAxisTextStyle={styles.axisText}
           xAxisLabelTextStyle={styles.axisText}
           showLine
@@ -131,7 +154,7 @@ export const SalesTrendCard = ({data}: {data: TendenciaVentas[]}) => {
         <View style={[styles.touchLayer, {left: Y_AXIS_WIDTH}]}>
           {data.map((item, index) => (
             <Pressable
-              key={item.mes}
+              key={`${index}-${item.mes}`}
               style={{width: columnWidth}}
               onPress={() => setSelected(index)}
               accessibilityRole="button"

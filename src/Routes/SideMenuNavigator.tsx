@@ -16,6 +16,7 @@ import { AplicarPlScreen } from '../presentation/screens/almacen/surtido/Aplicar
 import { BitacoraAlmacenScreen } from '../presentation/screens/almacen/bitacora/BitacoraAlmacenScreen';
 import { VerificadorEmbarqueScreen } from '../presentation/screens/embarque/VerificadorEmbarqueScreen';
 import { UbicarEnvioScreen } from '../presentation/screens/almacen/movimientosInternos/UbicarEnvioScreen';
+import { CentralVentasScreen } from '../presentation/screens/ventas/CentralVentasScreen';
 
 const Drawer = createDrawerNavigator();
 
@@ -34,6 +35,7 @@ const ScreenMapping = {
   '/almacen/bitacora/': BitacoraAlmacenScreen,
   '/almacen/embarque/verificarqr/':VerificadorEmbarqueScreen,
   '/almacen/movinternos/ubicarenvio/':UbicarEnvioScreen,
+  '/ventas/centralventas/': CentralVentasScreen,
 
 };
 

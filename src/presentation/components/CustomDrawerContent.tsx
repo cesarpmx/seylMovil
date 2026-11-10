@@ -78,6 +78,9 @@ const nameIconOverride: Record<string, string> = {
   'usuario': 'person-outline',
   'usuarios': 'people-outline',
   'reportes': 'pie-chart-outline',
+  'ventas': 'trending-up-outline',
+  'central ventas': 'bar-chart-outline',
+  'central de ventas': 'bar-chart-outline',
 };
 
 // (2) Iconos por RUTA para módulos hoja con pantalla real
@@ -96,6 +99,7 @@ const routeIconFallback: Record<string, string> = {
   '/almacen/surtido/aplicarpl/': 'checkmark-circle-2-outline',
   '/almacen/bitacora/': 'book-open-outline',
   '/almacen/embarque/verificarqr/': 'car-outline',
+  '/ventas/centralventas/': 'bar-chart-outline',
 };
 
 // (4) Icono genérico para padres sin resolución previa

@@ -50,7 +50,7 @@ export const TopClientsCard = ({clientes}: {clientes: TopCliente[]}) => {
       </View>
 
       {clientes.map((c, index) => (
-        <View key={c.cliente} style={styles.row}>
+        <View key={`${index}-${c.cliente}`} style={styles.row}>
           <View
             style={[
               styles.swatch,

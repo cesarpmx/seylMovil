@@ -10,17 +10,19 @@ const MESES = [
 ];
 
 const formatPeriodo = (periodo: string) => {
-  const [anio, mes] = periodo.split('-');
-  return `${MESES[Number(mes) - 1]} ${anio}`;
+  const [anio, mes] = (periodo ?? '').split('-');
+  const nombre = MESES[Number(mes) - 1];
+  return nombre ? `${nombre} ${anio}` : periodo;
 };
 
 interface Props {
   periodo: string;
   kpis: DashboardKpis;
-  isMock?: boolean;
+  /** Texto corto a la derecha del período (ej. empresa consultada). */
+  etiqueta?: string;
 }
 
-export const KpiHeader = ({periodo, kpis, isMock}: Props) => (
+export const KpiHeader = ({periodo, kpis, etiqueta}: Props) => (
   <View style={styles.hero}>
     {/* Fondo absoluto: con padding/hijos dentro, el gradiente recorta el contenido en iOS. */}
     <LinearGradient
@@ -31,7 +33,11 @@ export const KpiHeader = ({periodo, kpis, isMock}: Props) => (
     />
     <View style={styles.topRow}>
       <Text style={styles.periodo}>{formatPeriodo(periodo)}</Text>
-      {isMock && <Text style={styles.badge}>Datos de prueba</Text>}
+      {etiqueta ? (
+        <Text style={styles.badge} numberOfLines={1}>
+          {etiqueta}
+        </Text>
+      ) : null}
     </View>
     <Text style={styles.heroLabel}>Ventas del período</Text>
     <Text style={styles.heroValue} adjustsFontSizeToFit numberOfLines={1}>
@@ -72,6 +78,7 @@ const styles = StyleSheet.create({
   },
   periodo: {color: '#ffffff', fontSize: 13, fontWeight: '600'},
   badge: {
+    maxWidth: '60%',
     color: '#ffffff',
     fontSize: 11,
     fontWeight: '600',

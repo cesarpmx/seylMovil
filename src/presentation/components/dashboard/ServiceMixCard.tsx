@@ -29,7 +29,7 @@ const MixBlock = ({title, items}: {title: string; items: MixItem[]}) => {
       <View style={styles.bar}>
         {items.map((item, index) => (
           <View
-            key={item.nombre}
+            key={`${index}-${item.nombre}`}
             style={[
               styles.segment,
               {
@@ -41,7 +41,7 @@ const MixBlock = ({title, items}: {title: string; items: MixItem[]}) => {
         ))}
       </View>
       {items.map((item, index) => (
-        <View key={item.nombre} style={styles.row}>
+        <View key={`${index}-${item.nombre}`} style={styles.row}>
           <View
             style={[
               styles.swatch,
