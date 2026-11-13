@@ -57,6 +57,7 @@ export const useAuthStore = create<ModulesState>()((set, get) => ({
     const loginTimestamp = Date.now();
     await StorageAdapter.setItem('token', resp.usuid);
     await StorageAdapter.setItem('usunombre', resp.usunombre);
+    await StorageAdapter.setItem('usumail', resp.usumail ?? '');
     await StorageAdapter.setItem('modules', JSON.stringify(resp.modules));
     await StorageAdapter.setItem('empresas', JSON.stringify(resp.empresas));
     await StorageAdapter.setItem('almacenes', JSON.stringify(resp.almacenes));
@@ -78,6 +79,7 @@ export const useAuthStore = create<ModulesState>()((set, get) => ({
     
     const token = await StorageAdapter.getItem('token');
     const usuNombre = await StorageAdapter.getItem('usunombre');
+    const usuMail = await StorageAdapter.getItem('usumail');
     const cachedModules = await StorageAdapter.getItem('modules');
     const cachedEmpresas = await StorageAdapter.getItem('empresas');
     const cachedAlmacenes = await StorageAdapter.getItem('almacenes');
@@ -97,6 +99,7 @@ export const useAuthStore = create<ModulesState>()((set, get) => ({
         status: 'authenticated',
         usuid: token,
         usunombre: usuNombre || "",
+        usumail: usuMail || undefined,
         modules: cachedModules ? JSON.parse(cachedModules) : undefined,
         empresas: cachedEmpresas ? JSON.parse(cachedEmpresas) : undefined,
         almacenes: cachedAlmacenes ? JSON.parse(cachedAlmacenes) : undefined,
@@ -113,6 +116,7 @@ export const useAuthStore = create<ModulesState>()((set, get) => ({
 
     await StorageAdapter.removeItem('token');
     await StorageAdapter.removeItem('usunombre');
+    await StorageAdapter.removeItem('usumail');
     await StorageAdapter.removeItem('modules');
     await StorageAdapter.removeItem('empresas');
     await StorageAdapter.removeItem('almacenes');
@@ -124,6 +128,7 @@ export const useAuthStore = create<ModulesState>()((set, get) => ({
       status: 'unauthenticated',
       usuid: undefined,
       usunombre: undefined,
+      usumail: undefined,
       modules: [],
       empresas: [],
       almacenes: [],

@@ -35,7 +35,7 @@ const ScreenMapping = {
   '/almacen/bitacora/': BitacoraAlmacenScreen,
   '/almacen/embarque/verificarqr/':VerificadorEmbarqueScreen,
   '/almacen/movinternos/ubicarenvio/':UbicarEnvioScreen,
-  '/ventas/centralventas/': CentralVentasScreen,
+  '/finanzas/reporteventas': CentralVentasScreen,
 
 };
 

@@ -1,6 +1,16 @@
 import {Input, Layout, Text, Button} from '@ui-kitten/components';
 import React, {useRef, useState} from 'react';
-import {Alert, Image, Pressable, ScrollView, StyleSheet, useWindowDimensions, View} from 'react-native';
+import {
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import {MyIcon} from '../../components/ui/MyIcon';
 import {StackScreenProps} from '@react-navigation/stack';
 import {RootStackParams} from '../../navigation/StackNavigator';
@@ -55,6 +65,7 @@ export const LoginScreen = ({navigation}: Props) => {
   };
 
   const {height} = useWindowDimensions();
+  const passwordRef = useRef<Input>(null);
 
   return (
     <Layout style={{flex: 1}}>
@@ -74,7 +85,16 @@ export const LoginScreen = ({navigation}: Props) => {
           <MyIcon name="settings-2-outline" size={32} />
         </Pressable>
       </View>
-      <ScrollView style={{marginHorizontal: 40}}>
+      {/* iOS: 'padding' sube el contenido sobre el teclado.
+          Android: lo resuelve windowSoftInputMode="adjustResize" del manifest. */}
+      <KeyboardAvoidingView
+        style={{flex: 1}}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        style={{marginHorizontal: 40}}
+        contentContainerStyle={{paddingBottom: 24}}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
         <Layout style={{paddingTop: height * 0.18}}>
           <Layout
             style={{
@@ -100,14 +120,20 @@ export const LoginScreen = ({navigation}: Props) => {
             autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => passwordRef.current?.focus()}
             accessoryLeft={<MyIcon name={'email-outline'} />}
             style={{marginBottom: 10}}
           />
 
           <Input
+            ref={passwordRef}
             placeholder="Contraseña"
             autoCapitalize="none"
             secureTextEntry
+            returnKeyType="go"
+            onSubmitEditing={onLogin}
             value={password}
             onChangeText={setPassword}
             accessoryLeft={<MyIcon name={'lock-outline'} />}
@@ -132,6 +158,7 @@ export const LoginScreen = ({navigation}: Props) => {
         </Layout>
 
       </ScrollView>
+      </KeyboardAvoidingView>
     </Layout>
   );
 };

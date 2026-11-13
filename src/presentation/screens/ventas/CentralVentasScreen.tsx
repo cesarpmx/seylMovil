@@ -23,7 +23,9 @@ import { ServiceMixCard } from '../../components/dashboard/ServiceMixCard';
 import { getDashboardVentas } from '../../../actions/ventas/get-DashboardVentas';
 import { Dashboard } from '../../../domain/entities/dashboard';
 
-const DIAS_ATRAS_DEFAULT = '365';
+// Días atrás por defecto: desde el día 1 del mes de la fecha fin.
+// Ej. fecha fin 31/10 → 30 días atrás → consulta del 01/10 al 31/10.
+const diasDesdeInicioDeMes = (d: Date) => String(d.getDate() - 1);
 
 // El backend espera dd-MM-yyyy (mismo formato que tareaswms).
 const toApiDate = (d: Date) =>
@@ -41,8 +43,9 @@ export const CentralVentasScreen = () => {
   const [almacen, setAlmacen] = useState<string | null>(null);
   const [fechaFin, setFechaFin] = useState(new Date());
   const [openFecha, setOpenFecha] = useState(false);
-  const [diasAtras, setDiasAtras] = useState(DIAS_ATRAS_DEFAULT);
+  const [diasAtras, setDiasAtras] = useState(() => diasDesdeInicioDeMes(new Date()));
   const [errores, setErrores] = useState({ empresa: false, almacen: false, dias: false });
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(true);
 
   // Resultado
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -56,7 +59,8 @@ export const CentralVentasScreen = () => {
     const nuevosErrores = {
       empresa: empresa === null,
       almacen: !almacen,
-      dias: !Number.isInteger(dias) || dias <= 0,
+      // 0 es válido: fecha fin el día 1 → solo ese día.
+      dias: diasAtras === '' || !Number.isInteger(dias) || dias < 0,
     };
     setErrores(nuevosErrores);
     if (nuevosErrores.empresa || nuevosErrores.almacen || nuevosErrores.dias) return;
@@ -70,11 +74,11 @@ export const CentralVentasScreen = () => {
         fechafin: toApiDate(fechaFin),
         diasAtras: dias,
       });
+      const empNombre = empresas?.find(e => e.empid === empresa)?.empnomcorto ?? '';
       setDashboard(data);
-      setEmpresaConsultada(
-        empresas?.find(e => e.empid === empresa)?.empnomcorto ?? '',
-      );
+      setEmpresaConsultada(empNombre);
       setBusquedaId(id => id + 1);
+      setFiltrosAbiertos(false);
     } catch {
       setError(true);
     } finally {
@@ -103,11 +107,25 @@ export const CentralVentasScreen = () => {
           nestedScrollEnabled>
           {/* Filtros */}
           <View style={[styles.card, styles.filtersCard]}>
-            <View style={styles.sectionHeader}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setFiltrosAbiertos(v => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={filtrosAbiertos ? 'Ocultar filtros' : 'Mostrar filtros'}
+              accessibilityState={{ expanded: filtrosAbiertos }}
+              hitSlop={8}
+              style={[styles.sectionHeader, !filtrosAbiertos && styles.sectionHeaderCollapsed]}>
               <MyIcon name="funnel-outline" size={16} />
               <Text style={styles.sectionTitle}>Filtros</Text>
-            </View>
+              <MyIcon
+                name={filtrosAbiertos ? 'chevron-up-outline' : 'chevron-down-outline'}
+                size={20}
+              />
+            </TouchableOpacity>
 
+            {/* Se oculta con display:none (no se desmonta) para que los
+                selects conserven la empresa/almacén elegidos. */}
+            <View style={!filtrosAbiertos && styles.hidden}>
             <View style={[styles.fieldGroup, { zIndex: 4000 }]}>
               <Text style={styles.fieldLabel}>Empresa *</Text>
               <SelectEmpresa
@@ -166,7 +184,7 @@ export const CentralVentasScreen = () => {
             {(errores.empresa || errores.almacen || errores.dias) && (
               <Text style={styles.errorText}>
                 {errores.dias && !errores.empresa && !errores.almacen
-                  ? 'Días atrás debe ser un número mayor a 0.'
+                  ? 'Días atrás debe ser un número (0 o más).'
                   : 'Completa los campos marcados para buscar.'}
               </Text>
             )}
@@ -196,9 +214,12 @@ export const CentralVentasScreen = () => {
               onConfirm={d => {
                 setOpenFecha(false);
                 setFechaFin(d);
+                setDiasAtras(diasDesdeInicioDeMes(d));
+                setErrores(e => ({ ...e, dias: false }));
               }}
               onCancel={() => setOpenFecha(false)}
             />
+            </View>
           </View>
 
           {/* Resultado */}
@@ -278,6 +299,8 @@ const styles = StyleSheet.create({
   filtersCard: { zIndex: 5000 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   sectionTitle: { flex: 1, fontSize: 13, fontWeight: '800', color: '#0F172A' },
+  sectionHeaderCollapsed: { marginBottom: 0 },
+  hidden: { display: 'none' },
   fieldGroup: { marginBottom: 12 },
   fieldLabel: {
     fontSize: 11,

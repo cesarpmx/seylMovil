@@ -99,7 +99,7 @@ const routeIconFallback: Record<string, string> = {
   '/almacen/surtido/aplicarpl/': 'checkmark-circle-2-outline',
   '/almacen/bitacora/': 'book-open-outline',
   '/almacen/embarque/verificarqr/': 'car-outline',
-  '/ventas/centralventas/': 'bar-chart-outline',
+  '/finanzas/reporteventas': 'bar-chart-outline',
 };
 
 // (4) Icono genérico para padres sin resolución previa
